@@ -129,6 +129,7 @@ tr:hover td { background: rgba(255,255,255,.02); }
   <div class="tab" onclick="switchTab('inventory')">📦 Inventory &amp; POs</div>
   <div class="tab" onclick="switchTab('catalog')">🛍️ Catalog</div>
   <div class="tab" onclick="switchTab('competitors')">🔍 Competitors</div>
+  <div class="tab" onclick="switchTab('tasks')" id="tab-btn-tasks">✅ Tasks <span id="tasks-badge" style="background:var(--red);color:#fff;border-radius:10px;padding:1px 6px;font-size:10px;font-weight:700;margin-left:4px;"></span></div>
 </div>
 
 <!-- ══ TAB 1: OVERVIEW ══ -->
@@ -637,6 +638,48 @@ tr:hover td { background: rgba(255,255,255,.02); }
   </div>
 </div>
 
+<!-- ══ TAB 7: TASKS ══ -->
+<div id="tab-tasks" class="content">
+
+  <div style="display:flex;justify-content:space-between;align-items:center;">
+    <div>
+      <div style="font-size:18px;font-weight:700;color:#fff;margin-bottom:4px;">Team Action List</div>
+      <div style="font-size:12px;color:var(--muted);">Checkboxes save automatically in your browser. Add new tasks with the form below.</div>
+    </div>
+    <div style="display:flex;gap:10px;align-items:center;">
+      <div id="tasks-summary" style="font-size:13px;color:var(--muted);"></div>
+      <button onclick="clearCompleted()" style="background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.2);color:var(--red);border-radius:6px;padding:6px 14px;cursor:pointer;font-size:12px;">Clear Completed</button>
+    </div>
+  </div>
+
+  <div id="task-groups"></div>
+
+  <!-- Add task form -->
+  <div class="card" style="border-style:dashed;">
+    <h3>+ Add a Task</h3>
+    <div style="display:grid;grid-template-columns:2fr 1fr 1fr auto;gap:10px;align-items:end;">
+      <div>
+        <label style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;display:block;margin-bottom:5px;">Task description</label>
+        <input id="new-task-text" type="text" placeholder="e.g. Check Fairy White inventory in CPFR..." style="width:100%;background:var(--card2);border:1px solid var(--border);border-radius:6px;padding:8px 12px;color:#fff;font-size:13px;" onkeydown="if(event.key==='Enter')addTask()">
+      </div>
+      <div>
+        <label style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;display:block;margin-bottom:5px;">Priority</label>
+        <select id="new-task-group" style="width:100%;background:var(--card2);border:1px solid var(--border);border-radius:6px;padding:8px 12px;color:#fff;font-size:13px;">
+          <option value="today">🔴 Do Today</option>
+          <option value="week">🟡 This Week</option>
+          <option value="inventory">🟠 When Inventory Arrives</option>
+          <option value="data">🔵 Dashboard / Data</option>
+        </select>
+      </div>
+      <div>
+        <label style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;display:block;margin-bottom:5px;">Assign to</label>
+        <input id="new-task-owner" type="text" placeholder="Lisa / Jamie / —" style="width:100%;background:var(--card2);border:1px solid var(--border);border-radius:6px;padding:8px 12px;color:#fff;font-size:13px;">
+      </div>
+      <button onclick="addTask()" style="background:var(--accent);border:none;color:#fff;border-radius:6px;padding:9px 20px;cursor:pointer;font-size:13px;font-weight:600;white-space:nowrap;">Add Task</button>
+    </div>
+  </div>
+</div>
+
 <script>
 // ── Shared data ──
 const plMonths  = ['Aug 24','Sep 24','Oct 24','Nov 24','Dec 24','Jan 25','Feb 25','Mar 25','Apr 25','May 25','Jun 25','Jul 25','Aug 25','Sep 25','Oct 25','Nov 25','Dec 25','Jan 26','Feb 26','Mar 26','Apr 26'];
@@ -657,7 +700,7 @@ function mkChart(id,type,data,opts){ return new Chart(document.getElementById(id
 
 // ── Tab switching ──
 function switchTab(id){
-  const ids=['overview','pl','ads','inventory','catalog','competitors'];
+  const ids=['overview','pl','ads','inventory','catalog','competitors','tasks'];
   document.querySelectorAll('.tab').forEach((t,i)=>t.classList.toggle('active',ids[i]===id));
   document.querySelectorAll('.content').forEach(c=>c.classList.remove('active'));
   document.getElementById('tab-'+id).classList.add('active');
@@ -863,7 +906,115 @@ function updatePO(){
   document.getElementById('po-results').innerHTML=html;
 }
 // Auto-run PO tool on load so pre-populated values show results immediately
-document.addEventListener('DOMContentLoaded',()=>updatePO());
+document.addEventListener('DOMContentLoaded',()=>{ updatePO(); initTasks(); });
+
+// ── Tasks ──
+const TASK_KEY = 'pp_tasks_v1';
+const GROUP_META = {
+  today:     { label:'🔴 Do Today',                color:'var(--red)',    bg:'rgba(239,68,68,.06)',   border:'rgba(239,68,68,.2)' },
+  week:      { label:'🟡 This Week — Ads',         color:'var(--yellow)', bg:'rgba(245,158,11,.06)', border:'rgba(245,158,11,.2)' },
+  inventory: { label:'🟠 When Inventory Arrives',  color:'#f97316',       bg:'rgba(249,115,22,.06)', border:'rgba(249,115,22,.2)' },
+  data:      { label:'🔵 Dashboard / Data',        color:'var(--blue)',   bg:'rgba(59,130,246,.06)', border:'rgba(59,130,246,.2)' },
+};
+
+const DEFAULT_TASKS = [
+  { id:'t1',  group:'today',     text:'Pull Fairy White & Blue on-hand from CPFR spreadsheet before touching FRD budget', owner:'Lisa',  done:false },
+  { id:'t2',  group:'today',     text:'Jamie: submit ticket to add Fairy Door SKUs (1381150, 1381166) to vendor statement reports', owner:'Jamie', done:false },
+  { id:'t3',  group:'today',     text:'Meow Manor Black (1381110): submit partial shipment of 19 units to Chewy, notify of 17-unit shortfall, place restock order', owner:'Lisa',  done:false },
+  { id:'t4',  group:'today',     text:'Verify OH for Beacon Hill Black (1381222), Beacon Hill White/Gold (1381230), Gnome Door Black (1381254), Gnome Door Blue/Green (1381262) before confirming PO shipments', owner:'Jamie', done:false },
+  { id:'t5',  group:'week',      text:'Once Fairy White inventory confirmed: raise FRD budget to $250 and CPC bid to $0.80', owner:'Lisa',  done:false },
+  { id:'t6',  group:'week',      text:'Split FRD into separate "FRW - Fairy White" and "FRB - Fairy Blue" campaigns in Chewy Ads', owner:'Lisa',  done:false },
+  { id:'t7',  group:'week',      text:'Pause Blue on "cat door" and "cat door interior door" keywords', owner:'Lisa',  done:false },
+  { id:'t8',  group:'week',      text:'Activate MMXL campaign at $100/mo — inventory confirmed healthy (167 OH XL White, 102 OH XL Brown)', owner:'Lisa',  done:false },
+  { id:'t9',  group:'week',      text:'Once Gnome Door inventory verified: test GD campaign at $50/mo', owner:'Lisa',  done:false },
+  { id:'t10', group:'inventory', text:'Restock all 3 French Door SKUs (1381182, 1381198, 1381190) — all OOS → activate FD campaign same day stock arrives', owner:'Lisa',  done:false },
+  { id:'t11', group:'inventory', text:'Restock Meow Manor Black (1381110) to 50+ units → activate Meow Manor campaign', owner:'Lisa',  done:false },
+  { id:'t12', group:'data',      text:'Upload CPFR spreadsheet to dashboard so Fairy Door inventory populates', owner:'Lisa',  done:false },
+  { id:'t13', group:'data',      text:'Upload historical PPC reports (months of daily data) for seasonality analysis', owner:'Lisa',  done:false },
+  { id:'t14', group:'data',      text:'Build email → auto-upload pipeline for daily PPC reports', owner:'—',    done:false },
+];
+
+function loadTasks(){
+  try { return JSON.parse(localStorage.getItem(TASK_KEY)) || DEFAULT_TASKS; }
+  catch(e){ return DEFAULT_TASKS; }
+}
+function saveTasks(tasks){ localStorage.setItem(TASK_KEY, JSON.stringify(tasks)); }
+
+function renderTasks(){
+  const tasks = loadTasks();
+  const open = tasks.filter(t=>!t.done).length;
+  const total = tasks.length;
+  // badge on tab
+  const badge = document.getElementById('tasks-badge');
+  if(badge) badge.textContent = open > 0 ? open : '';
+  // summary
+  const sumEl = document.getElementById('tasks-summary');
+  if(sumEl) sumEl.textContent = `${total - open} of ${total} complete`;
+  // groups
+  const container = document.getElementById('task-groups');
+  if(!container) return;
+  const groups = ['today','week','inventory','data'];
+  container.innerHTML = groups.map(g=>{
+    const meta = GROUP_META[g];
+    const gtasks = tasks.filter(t=>t.group===g);
+    if(!gtasks.length) return '';
+    const doneCount = gtasks.filter(t=>t.done).length;
+    const rows = gtasks.map(t=>`
+      <div style="display:flex;align-items:flex-start;gap:12px;padding:10px 0;border-bottom:1px solid var(--border);${t.done?'opacity:.45;':''}" id="taskrow-${t.id}">
+        <input type="checkbox" ${t.done?'checked':''} onchange="toggleTask('${t.id}')"
+          style="margin-top:2px;width:16px;height:16px;accent-color:var(--green);flex-shrink:0;cursor:pointer;">
+        <div style="flex:1;min-width:0;">
+          <div style="font-size:13px;color:${t.done?'var(--muted)':'#fff'};${t.done?'text-decoration:line-through;':''}line-height:1.5;">${t.text}</div>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;flex-shrink:0;">
+          ${t.owner&&t.owner!=='—'?`<span style="background:rgba(108,99,255,.12);color:var(--accent);border-radius:4px;padding:2px 8px;font-size:11px;font-weight:600;">${t.owner}</span>`:''}
+          <button onclick="deleteTask('${t.id}')" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:14px;padding:0 4px;line-height:1;" title="Remove">×</button>
+        </div>
+      </div>`).join('');
+    return `<div style="background:${meta.bg};border:1px solid ${meta.border};border-radius:10px;padding:16px 20px;margin-bottom:14px;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
+        <div style="font-size:12px;font-weight:700;color:${meta.color};text-transform:uppercase;letter-spacing:.5px;">${meta.label}</div>
+        <div style="font-size:11px;color:var(--muted);">${doneCount}/${gtasks.length} done</div>
+      </div>
+      ${rows}
+    </div>`;
+  }).join('');
+}
+
+function toggleTask(id){
+  const tasks = loadTasks();
+  const t = tasks.find(t=>t.id===id);
+  if(t) t.done = !t.done;
+  saveTasks(tasks);
+  renderTasks();
+}
+
+function deleteTask(id){
+  const tasks = loadTasks().filter(t=>t.id!==id);
+  saveTasks(tasks);
+  renderTasks();
+}
+
+function clearCompleted(){
+  const tasks = loadTasks().filter(t=>!t.done);
+  saveTasks(tasks);
+  renderTasks();
+}
+
+function addTask(){
+  const text = document.getElementById('new-task-text').value.trim();
+  if(!text) return;
+  const group = document.getElementById('new-task-group').value;
+  const owner = document.getElementById('new-task-owner').value.trim() || '—';
+  const tasks = loadTasks();
+  tasks.push({ id:'t'+Date.now(), group, text, owner, done:false });
+  saveTasks(tasks);
+  document.getElementById('new-task-text').value = '';
+  document.getElementById('new-task-owner').value = '';
+  renderTasks();
+}
+
+function initTasks(){ renderTasks(); }
 </script>
 </body>
 </html>
