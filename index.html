@@ -116,8 +116,8 @@ tr:hover td { background: rgba(255,255,255,.02); }
     <h1>🐾 Purrfect Portal</h1>
   </div>
   <div class="header-right">
-    <div class="alert-badge" onclick="switchTab('overview')">⚠️ 4 Alerts</div>
-    <div class="badge">Last updated: Jun 2, 2026</div>
+    <div class="alert-badge" onclick="switchTab('inventory')">⚠️ 5 Alerts</div>
+    <div class="badge">Last updated: Jun 4, 2026</div>
     <div class="badge">grace4712</div>
   </div>
 </div>
@@ -137,7 +137,8 @@ tr:hover td { background: rgba(255,255,255,.02); }
     <span class="alert-label">🚨 Active Alerts</span>
     <div class="alert-item"><div class="alert-dot"></div>Ad budget capped: $99.20/$100 — ~$900+/mo potential revenue uncaptured</div>
     <div class="alert-item"><div class="alert-dot"></div>3 SKUs out of stock: French Door White, Black &amp; Brown</div>
-    <div class="alert-item"><div class="alert-dot yellow"></div>Meow Manor Brown (1381110): 9 days of supply remaining</div>
+    <div class="alert-item"><div class="alert-dot"></div>🚨 PO Shortfall: Meow Manor Black (1381110) — 36 ordered, only 19 on hand (17-unit gap)</div>
+    <div class="alert-item"><div class="alert-dot yellow"></div>4 SKUs in this week's POs have no inventory data (Beacon Hill Black/Gold, Gnome Door Black/Blue)</div>
     <div class="alert-item"><div class="alert-dot yellow"></div>Blue "cat door" keyword: 2.2x ROAS — below optimal threshold</div>
   </div>
 
@@ -327,10 +328,41 @@ tr:hover td { background: rgba(255,255,255,.02); }
 
 <!-- ══ TAB 4: INVENTORY & POs ══ -->
 <div id="tab-inventory" class="content">
+
+  <!-- THIS WEEK'S PO SUMMARY -->
+  <div style="background:rgba(108,99,255,.07);border:1px solid rgba(108,99,255,.25);border-radius:10px;padding:16px 20px;">
+    <div style="font-size:11px;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:.6px;margin-bottom:12px;">📦 This Week's Chewy POs — Jun 3, 2026</div>
+    <div class="kpi-grid kpi-5" style="margin-bottom:12px;">
+      <div class="kpi"><div class="label">Total PO Value</div><div class="value good">$12,014</div></div>
+      <div class="kpi"><div class="label">PO Count</div><div class="value">14</div><div class="sub">across 9 Chewy DCs</div></div>
+      <div class="kpi"><div class="label">SKUs Ordered</div><div class="value">9</div></div>
+      <div class="kpi"><div class="label">🚨 Critical Shortfall</div><div class="value bad">17 units</div><div class="sub bad">Meow Manor Black — act now</div></div>
+      <div class="kpi"><div class="label">⚠️ Unknown Inventory</div><div class="value warn">4 SKUs</div><div class="sub warn">No stock data available</div></div>
+    </div>
+    <table style="font-size:12px;">
+      <thead><tr><th>SKU</th><th>Product</th><th>PO Qty</th><th>PO Value</th><th>OH Units</th><th>Shortfall</th><th>Status</th></tr></thead>
+      <tbody>
+        <tr><td style="color:var(--muted);font-size:11px;">1381086</td><td>Wall Entry Meow Manor White L</td><td>8</td><td>$230</td><td>145</td><td style="color:var(--green);">—</td><td><span class="pill pill-green">✓ Can ship all</span></td></tr>
+        <tr style="background:rgba(239,68,68,.04);"><td style="color:var(--muted);font-size:11px;">1381110</td><td><strong>Meow Manor Black/Brown L</strong></td><td>36</td><td>$826</td><td style="color:var(--red);font-weight:700;">19</td><td style="color:var(--red);font-weight:700;">17 units</td><td><span class="pill pill-red">🚨 CRITICAL SHORTFALL</span></td></tr>
+        <tr><td style="color:var(--muted);font-size:11px;">1381118</td><td>Meow Manor XL White</td><td>48</td><td>$1,588</td><td>167</td><td style="color:var(--green);">—</td><td><span class="pill pill-green">✓ Can ship all</span></td></tr>
+        <tr><td style="color:var(--muted);font-size:11px;">1381126</td><td>Meow Manor Brown XL</td><td>36</td><td>$1,047</td><td>102</td><td style="color:var(--green);">—</td><td><span class="pill pill-green">✓ Can ship all</span></td></tr>
+        <tr><td style="color:var(--muted);font-size:11px;">1381214</td><td>Beacon Hill White</td><td>12</td><td>$346</td><td>85</td><td style="color:var(--green);">—</td><td><span class="pill pill-green">✓ Can ship all</span></td></tr>
+        <tr style="background:rgba(245,158,11,.03);"><td style="color:var(--muted);font-size:11px;">1381222</td><td>Beacon Hill Black</td><td>12</td><td>$346</td><td style="color:var(--yellow);">?</td><td style="color:var(--yellow);">?</td><td><span class="pill pill-yellow">⚠️ No inventory data</span></td></tr>
+        <tr style="background:rgba(245,158,11,.03);"><td style="color:var(--muted);font-size:11px;">1381230</td><td><strong>Beacon Hill White/Gold — LARGEST</strong></td><td style="font-weight:700;color:var(--accent);">120</td><td style="font-weight:700;">$3,565</td><td style="color:var(--yellow);">?</td><td style="color:var(--yellow);">?</td><td><span class="pill pill-yellow">⚠️ No inventory data</span></td></tr>
+        <tr style="background:rgba(245,158,11,.03);"><td style="color:var(--muted);font-size:11px;">1381254</td><td>Gnome Door Black</td><td>24</td><td>$722</td><td style="color:var(--yellow);">?</td><td style="color:var(--yellow);">?</td><td><span class="pill pill-yellow">⚠️ No inventory data</span></td></tr>
+        <tr style="background:rgba(245,158,11,.03);"><td style="color:var(--muted);font-size:11px;">1381262</td><td><strong>Gnome Door Blue/Green — 2nd Largest</strong></td><td style="font-weight:700;color:var(--accent);">108</td><td style="font-weight:700;">$3,343</td><td style="color:var(--yellow);">?</td><td style="color:var(--yellow);">?</td><td><span class="pill pill-yellow">⚠️ No inventory data</span></td></tr>
+      </tbody>
+    </table>
+    <div style="display:flex;gap:10px;margin-top:10px;">
+      <div style="flex:1;background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.2);border-radius:8px;padding:10px 14px;font-size:12px;color:var(--text);">🚨 <strong>Action Required:</strong> Meow Manor Black (1381110) — PO for 36 units but only 19 on hand. Submit partial shipment of 19 to Chewy and notify immediately about 17-unit shortfall. Expedite restock.</div>
+      <div style="flex:1;background:rgba(245,158,11,.07);border:1px solid rgba(245,158,11,.2);border-radius:8px;padding:10px 14px;font-size:12px;color:var(--text);">⚠️ <strong>Verify Inventory:</strong> 4 new SKUs (Beacon Hill Black/Gold, Gnome Door Black/Blue) totaling $7,976 in POs have no stock data on file. Check warehouse stock before confirming shipments.</div>
+    </div>
+  </div>
+
   <div class="kpi-grid kpi-4">
-    <div class="kpi"><div class="label">Total OH Units</div><div class="value">1,221</div></div>
+    <div class="kpi"><div class="label">Total OH Units</div><div class="value">1,221</div><div class="sub">excl. 4 unknown-inventory SKUs</div></div>
     <div class="kpi"><div class="label">OOS SKUs</div><div class="value bad">3</div><div class="sub bad">French Door variants</div></div>
-    <div class="kpi"><div class="label">Critical DOS (&lt;30)</div><div class="value warn">1 SKU</div><div class="sub warn">1381110 — 9 days</div></div>
+    <div class="kpi"><div class="label">Critical DOS (&lt;30)</div><div class="value bad">1 SKU</div><div class="sub bad">1381110 — 9 days + PO shortfall</div></div>
     <div class="kpi"><div class="label">Avg Fill Rate</div><div class="value warn">67%</div><div class="sub">Dragged down by OOS</div></div>
   </div>
 
@@ -360,24 +392,30 @@ tr:hover td { background: rgba(255,255,255,.02); }
 
   <!-- PO Tool -->
   <div class="card" style="border-color:var(--accent);">
-    <h3>📋 PO Fulfillment Tool</h3>
-    <div style="font-size:12px;color:var(--muted);margin-bottom:16px;">Enter the quantities from the incoming Chewy PO. Instantly see what can ship, shortfalls, and what to flag.</div>
+    <h3>📋 PO Fulfillment Tool — Week of Jun 3, 2026</h3>
+    <div style="font-size:12px;color:var(--muted);margin-bottom:4px;">This week's PO quantities are pre-loaded from the Jun 3 file. Edit any field to adjust. Unknown inventory SKUs are highlighted.</div>
+    <div style="font-size:12px;color:var(--yellow);margin-bottom:16px;">⚠️ SKUs marked "?" have no inventory data — verify warehouse stock before confirming.</div>
     <div class="po-grid">
       <table>
-        <thead><tr><th>SKU</th><th>Product</th><th>OH</th><th>PO Qty</th></tr></thead>
+        <thead><tr><th>SKU</th><th>Product</th><th>OH</th><th>PO Qty</th><th>Chewy Price</th></tr></thead>
         <tbody>
-          <tr><td style="font-size:11px;color:var(--muted);">1381110</td><td style="font-size:12px;">Meow Manor Black/Brown Lg</td><td>19</td><td><input class="po-input" type="number" min="0" data-oh="19" data-sku="1381110" oninput="updatePO()" placeholder="0"></td></tr>
-          <tr><td style="font-size:11px;color:var(--muted);">1381182</td><td style="font-size:12px;">French Door White Lg</td><td style="color:var(--red);">0</td><td><input class="po-input" type="number" min="0" data-oh="0" data-sku="1381182" oninput="updatePO()" placeholder="0"></td></tr>
-          <tr><td style="font-size:11px;color:var(--muted);">1381198</td><td style="font-size:12px;">French Door Black Lg</td><td style="color:var(--red);">0</td><td><input class="po-input" type="number" min="0" data-oh="0" data-sku="1381198" oninput="updatePO()" placeholder="0"></td></tr>
-          <tr><td style="font-size:11px;color:var(--muted);">1381190</td><td style="font-size:12px;">French Door Brown Lg</td><td style="color:var(--red);">0</td><td><input class="po-input" type="number" min="0" data-oh="0" data-sku="1381190" oninput="updatePO()" placeholder="0"></td></tr>
-          <tr><td style="font-size:11px;color:var(--muted);">1381118</td><td style="font-size:12px;">Meow Manor XL White</td><td>167</td><td><input class="po-input" type="number" min="0" data-oh="167" data-sku="1381118" oninput="updatePO()" placeholder="0"></td></tr>
-          <tr><td style="font-size:11px;color:var(--muted);">1381086</td><td style="font-size:12px;">Wall Entry Meow Manor</td><td>145</td><td><input class="po-input" type="number" min="0" data-oh="145" data-sku="1381086" oninput="updatePO()" placeholder="0"></td></tr>
-          <tr><td style="font-size:11px;color:var(--muted);">1381134</td><td style="font-size:12px;">Meow Manor Black XL</td><td>184</td><td><input class="po-input" type="number" min="0" data-oh="184" data-sku="1381134" oninput="updatePO()" placeholder="0"></td></tr>
-          <tr><td style="font-size:11px;color:var(--muted);">355126</td><td style="font-size:12px;">Meow Manor Legacy</td><td>366</td><td><input class="po-input" type="number" min="0" data-oh="366" data-sku="355126" oninput="updatePO()" placeholder="0"></td></tr>
-          <tr><td style="font-size:11px;color:var(--muted);">1381214</td><td style="font-size:12px;">Beacon Hill Dog &amp; Cat</td><td>85</td><td><input class="po-input" type="number" min="0" data-oh="85" data-sku="1381214" oninput="updatePO()" placeholder="0"></td></tr>
+          <tr style="background:rgba(239,68,68,.06);"><td style="font-size:11px;color:var(--muted);">1381110</td><td style="font-size:12px;"><strong style="color:var(--red);">Meow Manor Black/Brown Lg</strong></td><td style="color:var(--red);font-weight:700;">19</td><td><input class="po-input" type="number" min="0" data-oh="19" data-sku="1381110" value="36" oninput="updatePO()"></td><td style="font-size:11px;color:var(--muted);">$22.95</td></tr>
+          <tr><td style="font-size:11px;color:var(--muted);">1381086</td><td style="font-size:12px;">Wall Entry Meow Manor White L</td><td>145</td><td><input class="po-input" type="number" min="0" data-oh="145" data-sku="1381086" value="8" oninput="updatePO()"></td><td style="font-size:11px;color:var(--muted);">$28.80</td></tr>
+          <tr><td style="font-size:11px;color:var(--muted);">1381118</td><td style="font-size:12px;">Meow Manor XL White</td><td>167</td><td><input class="po-input" type="number" min="0" data-oh="167" data-sku="1381118" value="48" oninput="updatePO()"></td><td style="font-size:11px;color:var(--muted);">$33.09</td></tr>
+          <tr><td style="font-size:11px;color:var(--muted);">1381126</td><td style="font-size:12px;">Meow Manor Brown XL</td><td>102</td><td><input class="po-input" type="number" min="0" data-oh="102" data-sku="1381126" value="36" oninput="updatePO()"></td><td style="font-size:11px;color:var(--muted);">$29.09</td></tr>
+          <tr><td style="font-size:11px;color:var(--muted);">1381214</td><td style="font-size:12px;">Beacon Hill Dog &amp; Cat White</td><td>85</td><td><input class="po-input" type="number" min="0" data-oh="85" data-sku="1381214" value="12" oninput="updatePO()"></td><td style="font-size:11px;color:var(--muted);">$28.84</td></tr>
+          <tr style="background:rgba(245,158,11,.04);"><td style="font-size:11px;color:var(--muted);">1381222</td><td style="font-size:12px;">Beacon Hill Black <span style="color:var(--yellow);font-size:10px;">⚠️ no inv data</span></td><td style="color:var(--yellow);">?</td><td><input class="po-input" type="number" min="0" data-oh="9999" data-sku="1381222" value="12" oninput="updatePO()" style="border-color:var(--yellow);"></td><td style="font-size:11px;color:var(--muted);">$28.84</td></tr>
+          <tr style="background:rgba(245,158,11,.04);"><td style="font-size:11px;color:var(--muted);">1381230</td><td style="font-size:12px;"><strong>Beacon Hill White/Gold</strong> <span style="color:var(--accent);font-size:10px;">★ largest PO</span> <span style="color:var(--yellow);font-size:10px;">⚠️ no inv data</span></td><td style="color:var(--yellow);">?</td><td><input class="po-input" type="number" min="0" data-oh="9999" data-sku="1381230" value="120" oninput="updatePO()" style="border-color:var(--yellow);"></td><td style="font-size:11px;color:var(--muted);">$29.71</td></tr>
+          <tr style="background:rgba(245,158,11,.04);"><td style="font-size:11px;color:var(--muted);">1381254</td><td style="font-size:12px;">Gnome Door Black <span style="color:var(--yellow);font-size:10px;">⚠️ no inv data</span></td><td style="color:var(--yellow);">?</td><td><input class="po-input" type="number" min="0" data-oh="9999" data-sku="1381254" value="24" oninput="updatePO()" style="border-color:var(--yellow);"></td><td style="font-size:11px;color:var(--muted);">$30.09</td></tr>
+          <tr style="background:rgba(245,158,11,.04);"><td style="font-size:11px;color:var(--muted);">1381262</td><td style="font-size:12px;"><strong>Gnome Door Blue/Green</strong> <span style="color:var(--accent);font-size:10px;">★ 2nd largest</span> <span style="color:var(--yellow);font-size:10px;">⚠️ no inv data</span></td><td style="color:var(--yellow);">?</td><td><input class="po-input" type="number" min="0" data-oh="9999" data-sku="1381262" value="108" oninput="updatePO()" style="border-color:var(--yellow);"></td><td style="font-size:11px;color:var(--muted);">$30.95</td></tr>
+          <tr><td style="font-size:11px;color:var(--muted);">1381182</td><td style="font-size:12px;">French Door White Lg</td><td style="color:var(--red);">0</td><td><input class="po-input" type="number" min="0" data-oh="0" data-sku="1381182" oninput="updatePO()" placeholder="0"></td><td style="font-size:11px;color:var(--muted);">—</td></tr>
+          <tr><td style="font-size:11px;color:var(--muted);">1381198</td><td style="font-size:12px;">French Door Black Lg</td><td style="color:var(--red);">0</td><td><input class="po-input" type="number" min="0" data-oh="0" data-sku="1381198" oninput="updatePO()" placeholder="0"></td><td style="font-size:11px;color:var(--muted);">—</td></tr>
+          <tr><td style="font-size:11px;color:var(--muted);">1381190</td><td style="font-size:12px;">French Door Brown Lg</td><td style="color:var(--red);">0</td><td><input class="po-input" type="number" min="0" data-oh="0" data-sku="1381190" oninput="updatePO()" placeholder="0"></td><td style="font-size:11px;color:var(--muted);">—</td></tr>
+          <tr><td style="font-size:11px;color:var(--muted);">1381134</td><td style="font-size:12px;">Meow Manor Black XL</td><td>184</td><td><input class="po-input" type="number" min="0" data-oh="184" data-sku="1381134" oninput="updatePO()" placeholder="0"></td><td style="font-size:11px;color:var(--muted);">—</td></tr>
+          <tr><td style="font-size:11px;color:var(--muted);">355126</td><td style="font-size:12px;">Meow Manor Legacy</td><td>366</td><td><input class="po-input" type="number" min="0" data-oh="366" data-sku="355126" oninput="updatePO()" placeholder="0"></td><td style="font-size:11px;color:var(--muted);">—</td></tr>
         </tbody>
       </table>
-      <div id="po-results"><div style="color:var(--muted);font-size:13px;padding:20px 0;">← Enter PO quantities to see fulfillment analysis</div></div>
+      <div id="po-results"></div>
     </div>
   </div>
 </div>
@@ -397,7 +435,11 @@ tr:hover td { background: rgba(255,255,255,.02); }
         <tr><td style="font-size:11px;color:var(--muted);">1381126</td><td><strong>Meow Manor Brown XL</strong></td><td>—</td><td>—</td><td>—</td><td>102</td><td>98</td><td><span class="pill pill-yellow">Paused</span></td><td>—</td><td><span class="pill pill-purple">Consider</span></td></tr>
         <tr><td style="font-size:11px;color:var(--muted);">1381102</td><td><strong>Meow Manor Brown, Lg</strong></td><td>—</td><td>—</td><td>—</td><td>153</td><td>304</td><td><span class="pill pill-yellow">Paused</span></td><td>—</td><td><span class="pill pill-purple">Consider</span></td></tr>
         <tr><td style="font-size:11px;color:var(--muted);">1381110</td><td><strong>Meow Manor Black/Brown, Lg</strong></td><td>—</td><td>—</td><td>—</td><td>19</td><td style="color:var(--red);font-weight:700;">9</td><td><span class="pill pill-yellow">Paused</span></td><td class="bad">4 halo ⚠️</td><td><span class="pill pill-red">Replenish</span></td></tr>
-        <tr><td style="font-size:11px;color:var(--muted);">1381214</td><td><strong>Beacon Hill Dog &amp; Cat</strong></td><td>—</td><td>—</td><td>—</td><td>85</td><td>104</td><td><span class="pill pill-yellow">Paused</span></td><td>1 halo</td><td><span class="pill pill-purple">Consider</span></td></tr>
+        <tr><td style="font-size:11px;color:var(--muted);">1381214</td><td><strong>Beacon Hill Dog &amp; Cat White</strong></td><td>$28.84</td><td>—</td><td>—</td><td>85</td><td>104</td><td><span class="pill pill-yellow">Paused</span></td><td>1 halo</td><td><span class="pill pill-purple">Consider</span></td></tr>
+        <tr style="background:rgba(245,158,11,.03);"><td style="font-size:11px;color:var(--muted);">1381222</td><td><strong>Beacon Hill Black</strong> <span style="font-size:10px;color:var(--yellow);">⚠️ new</span></td><td>$28.84</td><td>—</td><td>—</td><td style="color:var(--yellow);">?</td><td style="color:var(--yellow);">?</td><td><span class="pill pill-yellow">Unknown</span></td><td>—</td><td><span class="pill pill-yellow">Verify stock</span></td></tr>
+        <tr style="background:rgba(245,158,11,.03);"><td style="font-size:11px;color:var(--muted);">1381230</td><td><strong>Beacon Hill White/Gold</strong> <span style="font-size:10px;color:var(--accent);">★ 120-unit PO</span> <span style="font-size:10px;color:var(--yellow);">⚠️ new</span></td><td>$29.71</td><td>—</td><td>—</td><td style="color:var(--yellow);">?</td><td style="color:var(--yellow);">?</td><td><span class="pill pill-yellow">Unknown</span></td><td>—</td><td><span class="pill pill-yellow">Verify stock</span></td></tr>
+        <tr style="background:rgba(245,158,11,.03);"><td style="font-size:11px;color:var(--muted);">1381254</td><td><strong>Gnome Door Black</strong> <span style="font-size:10px;color:var(--yellow);">⚠️ new</span></td><td>$30.09</td><td>—</td><td>—</td><td style="color:var(--yellow);">?</td><td style="color:var(--yellow);">?</td><td><span class="pill pill-yellow">Unknown</span></td><td>—</td><td><span class="pill pill-yellow">Verify stock</span></td></tr>
+        <tr style="background:rgba(245,158,11,.03);"><td style="font-size:11px;color:var(--muted);">1381262</td><td><strong>Gnome Door Blue/Green</strong> <span style="font-size:10px;color:var(--accent);">★ 108-unit PO</span> <span style="font-size:10px;color:var(--yellow);">⚠️ new</span></td><td>$30.95</td><td>—</td><td>—</td><td style="color:var(--yellow);">?</td><td style="color:var(--yellow);">?</td><td><span class="pill pill-yellow">Unknown</span></td><td>—</td><td><span class="pill pill-yellow">Verify stock</span></td></tr>
         <tr><td style="font-size:11px;color:var(--muted);">355126</td><td><strong>Meow Manor Legacy</strong></td><td>—</td><td>—</td><td>—</td><td>366</td><td>182</td><td><span class="pill pill-yellow">Paused</span></td><td>—</td><td><span class="pill pill-purple">Consider</span></td></tr>
         <tr><td style="font-size:11px;color:var(--muted);">1381182</td><td><strong>French Door White, Lg</strong></td><td>—</td><td>—</td><td>—</td><td style="color:var(--red);">0</td><td style="color:var(--red);">0</td><td><span class="pill pill-red">OOS</span></td><td class="bad">0 (demand)</td><td><span class="pill pill-red">⛔ Replenish</span></td></tr>
         <tr><td style="font-size:11px;color:var(--muted);">1381198</td><td><strong>French Door Black, Lg</strong></td><td>—</td><td>—</td><td>—</td><td style="color:var(--red);">0</td><td style="color:var(--red);">0</td><td><span class="pill pill-red">OOS</span></td><td class="bad">0 (demand)</td><td><span class="pill pill-red">⛔ Replenish</span></td></tr>
@@ -646,32 +688,51 @@ function updateScenario(){
 // ── PO Tool ──
 function updatePO(){
   const inputs=document.querySelectorAll('.po-input');
-  let html='<table><thead><tr><th>SKU</th><th>PO</th><th>Ships</th><th>Shortfall</th></tr></thead><tbody>';
-  let tp=0,ts=0,tf=0,any=false;
+  let html='<table><thead><tr><th>SKU</th><th>PO Qty</th><th>Can Ship</th><th>Shortfall</th></tr></thead><tbody>';
+  let tp=0,ts=0,tf=0,unknownRows=0,any=false;
   inputs.forEach(inp=>{
     const po=parseInt(inp.value)||0;
     if(!po)return;
     any=true;
     const oh=parseInt(inp.dataset.oh)||0;
-    const ship=Math.min(po,oh);
-    const short=Math.max(0,po-oh);
-    tp+=po;ts+=ship;tf+=short;
-    html+=`<tr style="${short>0?'background:rgba(239,68,68,.04)':''}">
-      <td style="font-size:11px;color:var(--muted);">${inp.dataset.sku}</td>
-      <td>${po}</td>
-      <td class="${ship===po?'can-ship':'cant-ship'}">${ship}</td>
-      <td>${short>0?`<span style="color:var(--yellow);font-size:11px;">⚠️ ${short} short</span>`:'<span style="color:var(--green);">✓</span>'}</td>
-    </tr>`;
+    const unknown=oh===9999;
+    if(unknown){
+      unknownRows++;
+      tp+=po;
+      html+=`<tr style="background:rgba(245,158,11,.05);">
+        <td style="font-size:11px;color:var(--muted);">${inp.dataset.sku}</td>
+        <td>${po}</td>
+        <td style="color:var(--yellow);">?</td>
+        <td><span style="color:var(--yellow);font-size:11px;">⚠️ verify stock</span></td>
+      </tr>`;
+    } else {
+      const ship=Math.min(po,oh);
+      const short=Math.max(0,po-oh);
+      tp+=po;ts+=ship;tf+=short;
+      html+=`<tr style="${short>0?'background:rgba(239,68,68,.06)':''}">
+        <td style="font-size:11px;color:var(--muted);">${inp.dataset.sku}</td>
+        <td>${po}</td>
+        <td class="${ship===po?'can-ship':'cant-ship'}">${ship}</td>
+        <td>${short>0?`<span style="color:var(--red);font-weight:700;">⛔ ${short} short</span>`:'<span style="color:var(--green);">✓ Full</span>'}</td>
+      </tr>`;
+    }
   });
   if(!any){document.getElementById('po-results').innerHTML='<div style="color:var(--muted);font-size:13px;padding:20px 0;">← Enter PO quantities to see fulfillment analysis</div>';return;}
-  html+=`</tbody></table><div style="margin-top:12px;display:grid;grid-template-columns:repeat(3,1fr);gap:10px;">
-    <div class="s-out"><div class="s-label">PO Units</div><div class="s-val">${tp}</div></div>
-    <div class="s-out"><div class="s-label">Can Ship</div><div class="s-val" style="color:var(--green);">${ts}</div></div>
-    <div class="s-out"><div class="s-label">Shortfall</div><div class="s-val" style="color:${tf>0?'var(--red)':'var(--green)'};">${tf}</div></div>
+  html+=`</tbody></table><div style="margin-top:12px;display:grid;grid-template-columns:repeat(4,1fr);gap:10px;">
+    <div class="s-out"><div class="s-label">Total PO Units</div><div class="s-val">${tp}</div></div>
+    <div class="s-out"><div class="s-label">Confirmed Ship</div><div class="s-val" style="color:var(--green);">${ts}</div></div>
+    <div class="s-out"><div class="s-label">Known Shortfall</div><div class="s-val" style="color:${tf>0?'var(--red)':'var(--green)'};">${tf}</div></div>
+    <div class="s-out"><div class="s-label">Unverified SKUs</div><div class="s-val" style="color:${unknownRows>0?'var(--yellow)':'var(--green)'};">${unknownRows}</div></div>
   </div>`;
-  html+=tf>0?`<div class="warn-box" style="margin-top:10px;">⚠️ ${tf} units cannot be fulfilled. Flag these lines to Chewy as partial shipment and prioritize replenishment.</div>`:`<div class="green-box" style="margin-top:10px;">✅ Full PO can be fulfilled from current inventory.</div>`;
+  const msgs=[];
+  if(tf>0) msgs.push(`<div class="warn-box" style="margin-top:8px;">⛔ <strong style="color:#fff;">${tf} units cannot be fulfilled</strong> from known inventory. Flag partial shipment to Chewy and expedite restock — especially Meow Manor Black (SKU 1381110): 36 ordered, 19 on hand.</div>`);
+  if(unknownRows>0) msgs.push(`<div class="warn-box" style="margin-top:8px;">⚠️ <strong style="color:#fff;">${unknownRows} SKU(s)</strong> have no inventory data on file. Verify warehouse stock before confirming these shipments.</div>`);
+  if(tf===0&&unknownRows===0) msgs.push(`<div class="green-box" style="margin-top:8px;">✅ Full PO can be fulfilled from current inventory.</div>`);
+  html+=msgs.join('');
   document.getElementById('po-results').innerHTML=html;
 }
+// Auto-run PO tool on load so pre-populated values show results immediately
+document.addEventListener('DOMContentLoaded',()=>updatePO());
 </script>
 </body>
 </html>
