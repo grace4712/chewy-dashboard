@@ -1,0 +1,771 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Purrfect Portal — Chewy Ads Dashboard</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<style>
+  :root {
+    --bg: #0f1117;
+    --card: #1a1d27;
+    --border: #2a2d3a;
+    --accent: #6c63ff;
+    --green: #22c55e;
+    --red: #ef4444;
+    --yellow: #f59e0b;
+    --blue: #3b82f6;
+    --text: #e2e8f0;
+    --muted: #8892a4;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; font-size: 14px; }
+  .header { padding: 24px 32px 16px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; }
+  .header h1 { font-size: 22px; font-weight: 700; color: #fff; }
+  .header .period { background: var(--card); border: 1px solid var(--border); padding: 6px 14px; border-radius: 6px; color: var(--muted); font-size: 12px; }
+  .main { padding: 24px 32px; display: flex; flex-direction: column; gap: 24px; }
+
+  /* KPI Cards */
+  .kpi-grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 16px; }
+  .kpi { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 18px 20px; }
+  .kpi .label { color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: .6px; margin-bottom: 8px; }
+  .kpi .value { font-size: 26px; font-weight: 700; color: #fff; }
+  .kpi .sub { font-size: 12px; margin-top: 4px; }
+  .kpi .good { color: var(--green); }
+  .kpi .warn { color: var(--yellow); }
+  .kpi .bad { color: var(--red); }
+
+  /* Section */
+  .section-title { font-size: 13px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .5px; margin-bottom: 14px; }
+
+  /* Chart cards */
+  .charts-row { display: grid; grid-template-columns: 2fr 1fr; gap: 16px; }
+  .chart-card { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 20px; }
+  .chart-card h3 { font-size: 14px; font-weight: 600; margin-bottom: 16px; color: #fff; }
+  .chart-wrap { position: relative; height: 220px; }
+
+  /* Tables */
+  .tables-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .table-card { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 20px; }
+  .table-card h3 { font-size: 14px; font-weight: 600; margin-bottom: 14px; color: #fff; }
+  table { width: 100%; border-collapse: collapse; }
+  th { color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: .5px; padding: 6px 10px; text-align: left; border-bottom: 1px solid var(--border); }
+  td { padding: 9px 10px; border-bottom: 1px solid var(--border); font-size: 13px; }
+  tr:last-child td { border-bottom: none; }
+  .pill { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 600; }
+  .pill-green { background: rgba(34,197,94,.15); color: var(--green); }
+  .pill-yellow { background: rgba(245,158,11,.15); color: var(--yellow); }
+  .pill-blue { background: rgba(59,130,246,.15); color: var(--blue); }
+
+  /* Insights */
+  .insights-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+  .insight { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 18px 20px; }
+  .insight .icon { font-size: 22px; margin-bottom: 10px; }
+  .insight .title { font-size: 13px; font-weight: 700; color: #fff; margin-bottom: 6px; }
+  .insight .body { font-size: 12px; color: var(--muted); line-height: 1.6; }
+  .insight.action { border-left: 3px solid var(--accent); }
+  .insight.warn-card { border-left: 3px solid var(--yellow); }
+  .insight.opp { border-left: 3px solid var(--green); }
+
+  /* Cross-sell */
+  .crosssell-list { list-style: none; }
+  .crosssell-list li { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid var(--border); font-size: 13px; }
+  .crosssell-list li:last-child { border-bottom: none; }
+  .crosssell-list .name { color: var(--text); flex: 1; padding-right: 10px; }
+  .crosssell-list .units { color: var(--accent); font-weight: 600; }
+
+  /* Weekly bars */
+  .week-bars { display: flex; flex-direction: column; gap: 10px; }
+  .week-row { display: flex; align-items: center; gap: 10px; }
+  .week-label { width: 80px; font-size: 12px; color: var(--muted); flex-shrink: 0; }
+  .bar-wrap { flex: 1; background: var(--border); border-radius: 4px; height: 22px; position: relative; }
+  .bar-fill { height: 100%; border-radius: 4px; display: flex; align-items: center; padding-left: 8px; font-size: 11px; font-weight: 600; color: #fff; }
+  .week-roas { width: 60px; text-align: right; font-size: 12px; font-weight: 600; color: var(--green); }
+
+  @media (max-width: 1200px) {
+    .kpi-grid { grid-template-columns: repeat(3, 1fr); }
+    .charts-row, .tables-row, .insights-grid { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div>
+    <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.6px;margin-bottom:4px;">Chewy Sponsored Products</div>
+    <h1>🐾 Purrfect Portal — Ad Performance Dashboard</h1>
+  </div>
+  <div class="period">May 4 – Jun 2, 2026 &nbsp;·&nbsp; 30 Days</div>
+</div>
+
+<div class="main">
+
+  <!-- KPIs -->
+  <div>
+    <div class="section-title">30-Day Summary</div>
+    <div class="kpi-grid">
+      <div class="kpi">
+        <div class="label">Total Spend</div>
+        <div class="value">$99.20</div>
+        <div class="sub muted" style="color:var(--muted)">$3.31/day avg</div>
+      </div>
+      <div class="kpi">
+        <div class="label">Direct Sales</div>
+        <div class="value">$1,058.60</div>
+        <div class="sub good">+$959.40 vs spend</div>
+      </div>
+      <div class="kpi">
+        <div class="label">ROAS</div>
+        <div class="value" style="color:var(--green)">10.67x</div>
+        <div class="sub good">Excellent efficiency</div>
+      </div>
+      <div class="kpi">
+        <div class="label">Impressions</div>
+        <div class="value">13,831</div>
+        <div class="sub" style="color:var(--muted)">461/day avg</div>
+      </div>
+      <div class="kpi">
+        <div class="label">Clicks / CTR</div>
+        <div class="value">198</div>
+        <div class="sub warn">1.43% CTR</div>
+      </div>
+      <div class="kpi">
+        <div class="label">Conversion Rate</div>
+        <div class="value">14.1%</div>
+        <div class="sub good">28 orders / 198 clicks</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Daily Chart + Weekly Bars -->
+  <div class="charts-row">
+    <div class="chart-card">
+      <h3>Daily Spend vs. Sales &amp; ROAS Trend</h3>
+      <div class="chart-wrap">
+        <canvas id="dailyChart"></canvas>
+      </div>
+    </div>
+    <div class="chart-card">
+      <h3>Weekly ROAS &amp; Spend</h3>
+      <div class="week-bars" style="margin-top:8px;">
+        <div class="week-row">
+          <div class="week-label">May 4–10</div>
+          <div class="bar-wrap"><div class="bar-fill" style="width:100%;background:var(--accent);">$25.60</div></div>
+          <div class="week-roas">9.56x</div>
+        </div>
+        <div class="week-row">
+          <div class="week-label">May 11–17</div>
+          <div class="bar-wrap"><div class="bar-fill" style="width:96%;background:var(--accent);">$24.50</div></div>
+          <div class="week-roas">7.95x</div>
+        </div>
+        <div class="week-row">
+          <div class="week-label">May 18–24</div>
+          <div class="bar-wrap"><div class="bar-fill" style="width:91%;background:var(--accent);">$23.10</div></div>
+          <div class="week-roas">11.89x</div>
+        </div>
+        <div class="week-row">
+          <div class="week-label">May 25–31</div>
+          <div class="bar-wrap"><div class="bar-fill" style="width:77%;background:var(--blue);">$19.50</div></div>
+          <div class="week-roas">11.01x</div>
+        </div>
+        <div class="week-row">
+          <div class="week-label">Jun 1–2</div>
+          <div class="bar-wrap"><div class="bar-fill" style="width:26%;background:var(--green);">$6.50</div></div>
+          <div class="week-roas">19.97x</div>
+        </div>
+      </div>
+      <div style="margin-top:16px;font-size:11px;color:var(--muted);">
+        ↑ Bar = spend &nbsp;·&nbsp; ROAS = sales ÷ spend per week
+      </div>
+    </div>
+  </div>
+
+  <!-- Product + Keyword Tables -->
+  <div class="tables-row">
+    <div class="table-card">
+      <h3>Product Performance</h3>
+      <table>
+        <thead>
+          <tr>
+            <th>Product</th>
+            <th>Price</th>
+            <th>Spend</th>
+            <th>Sales</th>
+            <th>ROAS</th>
+            <th>CVR</th>
+            <th>Orders</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>
+              <div style="font-weight:600;">Fairy – White, Large</div>
+              <div style="font-size:11px;color:var(--muted);">SKU 1381150</div>
+            </td>
+            <td>$34.95</td>
+            <td>$66.60</td>
+            <td>$873.85</td>
+            <td><span class="pill pill-green">13.12x</span></td>
+            <td>17.3%</td>
+            <td>21</td>
+          </tr>
+          <tr>
+            <td>
+              <div style="font-weight:600;">Fairy – Blue, Large</div>
+              <div style="font-size:11px;color:var(--muted);">SKU 1381166</div>
+            </td>
+            <td>$29.95</td>
+            <td>$32.60</td>
+            <td>$184.75</td>
+            <td><span class="pill pill-yellow">5.67x</span></td>
+            <td>7.7%</td>
+            <td>5</td>
+          </tr>
+        </tbody>
+      </table>
+      <div style="margin-top:14px;padding:12px;background:rgba(108,99,255,.08);border-radius:8px;font-size:12px;color:var(--muted);">
+        💡 <strong style="color:#fff;">White drives 83% of sales</strong> at 2.3x the ROAS of Blue.
+        Consider shifting budget allocation toward White or raising Blue's bid only if CVR improves.
+      </div>
+    </div>
+
+    <div class="table-card">
+      <h3>Keyword Performance</h3>
+      <table>
+        <thead>
+          <tr>
+            <th>Keyword / Type</th>
+            <th>Product</th>
+            <th>Impressions</th>
+            <th>CTR</th>
+            <th>ROAS</th>
+            <th>CVR</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><span class="pill pill-blue">cat door</span></td>
+            <td style="color:var(--muted);font-size:12px;">White</td>
+            <td>3,869</td>
+            <td>1.58%</td>
+            <td><span class="pill pill-green">9.95x</span></td>
+            <td>13.1%</td>
+          </tr>
+          <tr>
+            <td><span class="pill pill-blue">Non-Boosted</span></td>
+            <td style="color:var(--muted);font-size:12px;">White</td>
+            <td>3,403</td>
+            <td>1.79%</td>
+            <td><span class="pill pill-green">15.88x</span></td>
+            <td>21.3%</td>
+          </tr>
+          <tr>
+            <td><span class="pill pill-blue">cat door int.</span></td>
+            <td style="color:var(--muted);font-size:12px;">White</td>
+            <td>678</td>
+            <td>1.62%</td>
+            <td><span class="pill pill-green">15.44x</span></td>
+            <td>18.2%</td>
+          </tr>
+          <tr>
+            <td><span class="pill pill-blue">cat door</span></td>
+            <td style="color:var(--muted);font-size:12px;">Blue</td>
+            <td>2,919</td>
+            <td>0.93%</td>
+            <td><span class="pill pill-yellow">2.20x</span></td>
+            <td>3.7%</td>
+          </tr>
+          <tr>
+            <td><span class="pill pill-blue">Non-Boosted</span></td>
+            <td style="color:var(--muted);font-size:12px;">Blue</td>
+            <td>2,359</td>
+            <td>1.14%</td>
+            <td><span class="pill pill-green">11.47x</span></td>
+            <td>14.8%</td>
+          </tr>
+          <tr>
+            <td><span class="pill pill-blue">cat door int.</span></td>
+            <td style="color:var(--muted);font-size:12px;">Blue</td>
+            <td>603</td>
+            <td>1.82%</td>
+            <td><span class="pill pill-red">0.00x</span></td>
+            <td>0.0%</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Halo / Cross-sell -->
+  <div class="tables-row">
+    <div class="table-card">
+      <h3>Cross-Sell Halo Effect <span style="font-weight:400;color:var(--muted);font-size:12px;">(products purchased after clicking White ad)</span></h3>
+      <ul class="crosssell-list">
+        <li><span class="name">Fairy White, Large (same product)</span><span class="units">6 units</span></li>
+        <li><span class="name">Meow Manor Black, Large</span><span class="units">4 units</span></li>
+        <li><span class="name">Meow Manor White, X-Large</span><span class="units">3 units</span></li>
+        <li><span class="name">Wall Entry Meow Manor White, Large</span><span class="units">2 units</span></li>
+        <li><span class="name">Fairy Blue, Large</span><span class="units">2 units</span></li>
+        <li><span class="name">Gnome Blue Green, Large</span><span class="units">2 units</span></li>
+        <li><span class="name">Meow Manor Brown, Large</span><span class="units">1 unit</span></li>
+        <li><span class="name">Beacon Hill Dog &amp; Cat Door, White, Large</span><span class="units">1 unit</span></li>
+        <li><span class="name">Meow Manor Interior Cat Door (legacy)</span><span class="units">1 unit</span></li>
+      </ul>
+      <div style="margin-top:12px;padding:10px;background:rgba(34,197,94,.07);border-radius:8px;font-size:12px;color:var(--muted);">
+        🔁 <strong style="color:#fff;">22 halo units sold</strong> beyond the 23 direct White units — your ad is lifting the whole catalog.
+      </div>
+    </div>
+
+    <div class="table-card">
+      <h3>Campaign Health &amp; Budget Efficiency</h3>
+      <table>
+        <thead>
+          <tr><th>Metric</th><th>Value</th><th>Signal</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Monthly Budget Used</td>
+            <td>$99.20 / $100</td>
+            <td><span class="pill pill-yellow">99.2% — near cap</span></td>
+          </tr>
+          <tr>
+            <td>Avg CPC</td>
+            <td>$0.50</td>
+            <td><span class="pill pill-green">Very low</span></td>
+          </tr>
+          <tr>
+            <td>Avg Position</td>
+            <td>11.3</td>
+            <td><span class="pill pill-yellow">Page 2 territory</span></td>
+          </tr>
+          <tr>
+            <td>New-to-Brand Customers</td>
+            <td>23 of 26 orders</td>
+            <td><span class="pill pill-green">88.5% NTB</span></td>
+          </tr>
+          <tr>
+            <td>Autoship Sign-Ups</td>
+            <td>0</td>
+            <td><span class="pill pill-yellow">No recurring rev</span></td>
+          </tr>
+          <tr>
+            <td>Active vs. Paused Campaigns</td>
+            <td>1 active / 4 paused</td>
+            <td><span class="pill pill-yellow">Underexposed</span></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- P&L Monthly Trend -->
+  <div>
+    <div class="section-title">Monthly P&amp;L — Aug 2024 through Apr 2026 (21 Months)</div>
+    <div style="display:grid;grid-template-columns:2fr 1fr;gap:16px;">
+
+      <div class="chart-card">
+        <h3>Revenue &amp; Profit by Month</h3>
+        <div class="chart-wrap" style="height:260px;">
+          <canvas id="plChart"></canvas>
+        </div>
+      </div>
+
+      <div class="chart-card">
+        <h3>Net Profit Margin by Month</h3>
+        <div class="chart-wrap" style="height:260px;">
+          <canvas id="marginChart"></canvas>
+        </div>
+        <div style="margin-top:10px;font-size:11px;color:var(--muted);">
+          Apr 2026 hit a record <strong style="color:var(--green);">58%</strong> margin — best in 21 months. Jan 2026 = $0 revenue (no orders shipped).
+        </div>
+      </div>
+
+    </div>
+
+    <!-- P&L KPI row -->
+    <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:16px;margin-top:16px;">
+      <div class="kpi">
+        <div class="label">Lifetime Revenue</div>
+        <div class="value">$237K</div>
+        <div class="sub" style="color:var(--muted);">21 months total</div>
+      </div>
+      <div class="kpi">
+        <div class="label">Lifetime Profit</div>
+        <div class="value" style="color:var(--green);">$97,982</div>
+        <div class="sub good">41.3% avg margin</div>
+      </div>
+      <div class="kpi">
+        <div class="label">Monthly Avg Revenue</div>
+        <div class="value">$12,484</div>
+        <div class="sub" style="color:var(--muted);">excl. Jan 2026 zero</div>
+      </div>
+      <div class="kpi">
+        <div class="label">Monthly Avg Profit</div>
+        <div class="value">$5,157</div>
+        <div class="sub good">per active month</div>
+      </div>
+      <div class="kpi">
+        <div class="label">Break-Even ROAS</div>
+        <div class="value" style="color:var(--yellow);">2.42x</div>
+        <div class="sub good">Current: 10.67x ✓</div>
+      </div>
+    </div>
+
+    <!-- Margin + cost breakdown note -->
+    <div style="background:var(--card);border:1px solid var(--border);border-radius:10px;padding:18px 20px;margin-top:16px;">
+      <div style="font-weight:700;font-size:14px;color:#fff;margin-bottom:10px;">Per-Unit Cost Structure (from Feb 2026 P&amp;L)</div>
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:16px;font-size:13px;">
+        <div>
+          <div style="color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;">Fairy Blue, Large</div>
+          <div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid var(--border);"><span>Sale price</span><span style="color:#fff;font-weight:600;">$28.64</span></div>
+          <div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid var(--border);"><span>Product COGS</span><span style="color:var(--red);">($6.32)</span></div>
+          <div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid var(--border);"><span>Chewy rebate (17.5%)</span><span style="color:var(--red);">($5.01)</span></div>
+          <div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid var(--border);"><span>Shipping (Avid→Chewy)</span><span style="color:var(--red);">($1.80 avg)</span></div>
+          <div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid var(--border);"><span>3PL fees (Avid)</span><span style="color:var(--red);">($0.46)</span></div>
+          <div style="display:flex;justify-content:space-between;padding:6px 0 2px;"><span style="font-weight:600;">Est. Net/unit</span><span style="color:var(--green);font-weight:700;">~$15.05 (53%)</span></div>
+        </div>
+        <div>
+          <div style="color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;">Fairy White, Large (est.)</div>
+          <div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid var(--border);"><span>Sale price</span><span style="color:#fff;font-weight:600;">$34.95</span></div>
+          <div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid var(--border);"><span>Product COGS</span><span style="color:var(--red);">~($6.50)</span></div>
+          <div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid var(--border);"><span>Chewy rebate (17.5%)</span><span style="color:var(--red);">($6.12)</span></div>
+          <div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid var(--border);"><span>Shipping (Avid→Chewy)</span><span style="color:var(--red);">($1.80 avg)</span></div>
+          <div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid var(--border);"><span>3PL fees (Avid)</span><span style="color:var(--red);">($0.46)</span></div>
+          <div style="display:flex;justify-content:space-between;padding:6px 0 2px;"><span style="font-weight:600;">Est. Net/unit</span><span style="color:var(--green);font-weight:700;">~$20.07 (57%)</span></div>
+        </div>
+        <div>
+          <div style="color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;">Break-Even ROAS Explained</div>
+          <div style="font-size:12px;color:var(--muted);line-height:1.8;">
+            With ~41% avg net margin on revenue, you need $1 ÷ 0.41 = <strong style="color:#fff;">$2.42 in sales per $1 of ad spend</strong> just to break even on ads.<br><br>
+            Your current ROAS of <strong style="color:var(--green);">10.67x</strong> is <strong style="color:var(--green);">4.4× the break-even threshold</strong> — every ad dollar is generating ~$3.97 in pure profit.
+          </div>
+        </div>
+        <div>
+          <div style="color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;">Margin Trend Signal</div>
+          <div style="font-size:12px;color:var(--muted);line-height:1.8;">
+            Margin compressed Nov–Dec 2025 (32–35%), likely from higher shipping or accessorial fees. Apr 2026 recovered to a record <strong style="color:var(--green);">58%</strong>.<br><br>
+            The Nov–Dec dip is worth investigating — if it was seasonal shipping cost inflation, plan for it in Q4 2026 by adjusting Chewy pricing or ordering inventory earlier.
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Inventory Health -->
+  <div>
+    <div class="section-title">Inventory Health &amp; Demand Forecast</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+
+      <div class="table-card">
+        <h3>Chewy On-Hand Stock &amp; Days of Supply <span style="font-weight:400;color:var(--muted);font-size:11px;">(Vendor Statement)</span></h3>
+        <table>
+          <thead>
+            <tr><th>SKU / Product</th><th>OH Units</th><th>DOS</th><th>Fill Rate</th><th>Status</th></tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><div style="font-weight:600;font-size:12px;">Meow Manor Brown/Black, Lg</div><div style="font-size:10px;color:var(--muted);">1381110</div></td>
+              <td>19</td><td style="color:var(--red);font-weight:700;">9</td><td style="color:var(--red);">18%</td>
+              <td><span class="pill" style="background:rgba(239,68,68,.15);color:var(--red);">🚨 Critical</span></td>
+            </tr>
+            <tr>
+              <td><div style="font-weight:600;font-size:12px;">French Door White, Lg</div><div style="font-size:10px;color:var(--muted);">1381182</div></td>
+              <td style="color:var(--red);">0</td><td style="color:var(--red);">0</td><td style="color:var(--red);">0%</td>
+              <td><span class="pill" style="background:rgba(239,68,68,.15);color:var(--red);">⛔ OOS</span></td>
+            </tr>
+            <tr>
+              <td><div style="font-weight:600;font-size:12px;">French Door Black, Lg</div><div style="font-size:10px;color:var(--muted);">1381198</div></td>
+              <td style="color:var(--red);">0</td><td style="color:var(--red);">0</td><td style="color:var(--red);">0%</td>
+              <td><span class="pill" style="background:rgba(239,68,68,.15);color:var(--red);">⛔ OOS</span></td>
+            </tr>
+            <tr>
+              <td><div style="font-weight:600;font-size:12px;">French Door Brown, Lg</div><div style="font-size:10px;color:var(--muted);">1381190</div></td>
+              <td style="color:var(--red);">0</td><td style="color:var(--red);">0</td><td style="color:var(--red);">0%</td>
+              <td><span class="pill" style="background:rgba(239,68,68,.15);color:var(--red);">⛔ OOS</span></td>
+            </tr>
+            <tr>
+              <td><div style="font-weight:600;font-size:12px;">Meow Manor XL, White</div><div style="font-size:10px;color:var(--muted);">1381118</div></td>
+              <td>167</td><td>47</td><td style="color:var(--green);">94%</td>
+              <td><span class="pill pill-green">✓ Healthy</span></td>
+            </tr>
+            <tr>
+              <td><div style="font-weight:600;font-size:12px;">Meow Manor Interior (legacy)</div><div style="font-size:10px;color:var(--muted);">355126</div></td>
+              <td>366</td><td>182</td><td style="color:var(--green);">100%</td>
+              <td><span class="pill pill-green">✓ Healthy</span></td>
+            </tr>
+            <tr>
+              <td><div style="font-weight:600;font-size:12px;">Meow Manor Black XL</div><div style="font-size:10px;color:var(--muted);">1381134</div></td>
+              <td>184</td><td>99</td><td style="color:var(--green);">100%</td>
+              <td><span class="pill pill-green">✓ Healthy</span></td>
+            </tr>
+            <tr>
+              <td><div style="font-weight:600;font-size:12px;">Wall Entry Meow Manor, White</div><div style="font-size:10px;color:var(--muted);">1381086</div></td>
+              <td>145</td><td>90</td><td style="color:var(--green);">100%</td>
+              <td><span class="pill pill-green">✓ Healthy</span></td>
+            </tr>
+            <tr>
+              <td><div style="font-weight:600;font-size:12px;">Beacon Hill Dog &amp; Cat</div><div style="font-size:10px;color:var(--muted);">1381214</div></td>
+              <td>85</td><td>104</td><td style="color:var(--green);">90%</td>
+              <td><span class="pill pill-green">✓ Healthy</span></td>
+            </tr>
+          </tbody>
+        </table>
+        <div style="margin-top:12px;padding:10px;background:rgba(239,68,68,.07);border-radius:8px;font-size:12px;color:var(--muted);">
+          ⚠️ <strong style="color:#fff;">Meow Manor Brown (1381110) is your top ad cross-sell product (4 halo units)</strong> — but it has only 9 days of supply and 18% fill rate. Your Fairy ad is driving customers to a product Chewy can barely fulfill.
+        </div>
+      </div>
+
+      <div class="chart-card">
+        <h3>6-Month Demand Forecast by SKU (Units)</h3>
+        <div class="chart-wrap" style="height:300px;">
+          <canvas id="forecastChart"></canvas>
+        </div>
+        <div style="margin-top:10px;font-size:11px;color:var(--muted);">
+          French Door variants show strong forecasted demand but are currently OOS — replenishment is blocking revenue.
+          Meow Manor XL has highest forecast at ~165 units by Dec.
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Inventory × Ad cross-sell connection -->
+    <div style="background:var(--card);border:1px solid var(--border);border-left:3px solid var(--yellow);border-radius:10px;padding:18px 20px;margin-top:16px;">
+      <div style="font-weight:700;font-size:14px;color:#fff;margin-bottom:8px;">⚠️ Ad Spend Is Driving Halo Sales to Out-of-Stock Products</div>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px;font-size:13px;color:var(--muted);line-height:1.6;">
+        <div><strong style="color:var(--red);">OOS Right Now:</strong> French Door White, Black &amp; Brown have 0 inventory and 100% PDP rate. Chewy's algorithm is showing the PDP but can't fulfill — demand is being lost.</div>
+        <div><strong style="color:var(--yellow);">9 DOS Risk:</strong> Meow Manor Brown/Black (1381110) — 4 cross-sell units came from your Fairy White ad last 30 days. At 9 DOS and 18% fill rate, replenishment is urgent or this halo revenue evaporates.</div>
+        <div><strong style="color:var(--green);">Opportunity:</strong> Once French Door SKUs are back in stock, consider running a dedicated Sponsored Product campaign for them — they have 12–46 units/month forecasted demand with no current ad support.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Insights -->
+  <div>
+    <div class="section-title">Profit Maximization Opportunities</div>
+    <div class="insights-grid">
+      <div class="insight action">
+        <div class="icon">💰</div>
+        <div class="title">Raise Your Budget — You're Capped at $99.20/$100</div>
+        <div class="body">You're hitting the monthly cap with a 10.67x ROAS. Every uncaptured dollar of budget could return ~$10.67 in sales. Increase budget to $200–$300/month to capture more impressions and test higher positions.</div>
+      </div>
+      <div class="insight action">
+        <div class="icon">📍</div>
+        <div class="title">Improve Avg Position (Currently 11.3)</div>
+        <div class="body">Your ads show at position 11 on average — page 2 for most searches. At $0.50 CPC you have room to bid up to $0.75–$1.00 to push toward positions 3–6 without destroying ROAS. Non-Boosted traffic already converts at 21% — more of it at better positions = big upside.</div>
+      </div>
+      <div class="insight opp">
+        <div class="icon">⚪ 🔵</div>
+        <div class="title">Pause Blue "cat door" — Kill the 2.2x ROAS Drag</div>
+        <div class="body">Blue Large on "cat door" keyword shows 0.93% CTR and only 2.2x ROAS. The same product on non-boosted traffic converts at 14.8% / 11.5x ROAS. Remove Blue from the "cat door" keyword bid and let it only run on organic/non-boosted — saves ~$13.60 in wasted spend.</div>
+      </div>
+      <div class="insight action">
+        <div class="icon">🔑</div>
+        <div class="title">Add "cat door interior door" Budget — 15.4x ROAS</div>
+        <div class="body">"cat door interior door" delivers 15.4x ROAS for White but only got $5.50 in spend. This keyword is severely under-funded. Dedicated budget here or a separate campaign for this keyword could unlock high-efficiency sales at scale.</div>
+      </div>
+      <div class="insight opp">
+        <div class="icon">🔓</div>
+        <div class="title">Reactivate Paused Campaigns (Meow Manor, GD, MMXL)</div>
+        <div class="body">4 campaigns are sitting paused. The Meow Manor Black was the #1 cross-sell product (4 halo units). Activating Meow Manor and XL campaigns would capture customers already buying those products — currently funded by your Fairy ad spend.</div>
+      </div>
+      <div class="insight warn-card">
+        <div class="icon">🔁</div>
+        <div class="title">Autoship = $0 — Missed Recurring Revenue</div>
+        <div class="body">0 autoship sign-ups across 26 orders. Cat doors are one-time purchases, but if you sell treats, litter, or food accessories, running targeted autoship campaigns for those SKUs on Chewy could unlock LTV multipliers. Worth testing with a dedicated campaign.</div>
+      </div>
+    </div>
+  </div>
+
+  <div style="color:var(--muted);font-size:11px;text-align:center;padding-bottom:8px;">
+    Data: Chewy Sponsored Products · May 4 – Jun 2, 2026 · Purrfect Portal (purrfect-portal) · Campaign ID 658582346
+  </div>
+
+</div>
+
+<script>
+const dailyData = [
+  { date:'May 4',  spend:3.5,  sales:124.85, roas:35.7 },
+  { date:'May 5',  spend:4.55, sales:44.95,  roas:9.9  },
+  { date:'May 6',  spend:3.5,  sales:0,      roas:0    },
+  { date:'May 7',  spend:3.5,  sales:0,      roas:0    },
+  { date:'May 8',  spend:3.5,  sales:0,      roas:0    },
+  { date:'May 9',  spend:3.5,  sales:39.95,  roas:11.4 },
+  { date:'May 10', spend:3.55, sales:34.95,  roas:9.8  },
+  { date:'May 11', spend:3.5,  sales:0,      roas:0    },
+  { date:'May 12', spend:3.5,  sales:44.95,  roas:12.8 },
+  { date:'May 13', spend:3.5,  sales:39.95,  roas:11.4 },
+  { date:'May 14', spend:3.5,  sales:39.95,  roas:11.4 },
+  { date:'May 15', spend:3.5,  sales:0,      roas:0    },
+  { date:'May 16', spend:3.5,  sales:39.95,  roas:11.4 },
+  { date:'May 17', spend:3.5,  sales:29.95,  roas:8.6  },
+  { date:'May 18', spend:4.0,  sales:74.9,   roas:18.7 },
+  { date:'May 19', spend:3.0,  sales:39.95,  roas:13.3 },
+  { date:'May 20', spend:3.05, sales:34.95,  roas:11.5 },
+  { date:'May 21', spend:3.0,  sales:0,      roas:0    },
+  { date:'May 22', spend:3.0,  sales:0,      roas:0    },
+  { date:'May 23', spend:4.0,  sales:124.85, roas:31.2 },
+  { date:'May 24', spend:3.05, sales:0,      roas:0    },
+  { date:'May 25', spend:3.0,  sales:29.95,  roas:10.0 },
+  { date:'May 26', spend:3.0,  sales:0,      roas:0    },
+  { date:'May 27', spend:3.0,  sales:39.95,  roas:13.3 },
+  { date:'May 28', spend:3.0,  sales:74.9,   roas:25.0 },
+  { date:'May 29', spend:3.0,  sales:39.95,  roas:13.3 },
+  { date:'May 30', spend:2.5,  sales:29.95,  roas:12.0 },
+  { date:'May 31', spend:2.0,  sales:0,      roas:0    },
+  { date:'Jun 1',  spend:3.0,  sales:34.95,  roas:11.7 },
+  { date:'Jun 2',  spend:3.5,  sales:94.85,  roas:27.1 },
+];
+
+const labels = dailyData.map(d => d.date);
+const spendData = dailyData.map(d => d.spend);
+const salesData = dailyData.map(d => d.sales);
+const roasData = dailyData.map(d => d.roas);
+
+const ctx = document.getElementById('dailyChart').getContext('2d');
+new Chart(ctx, {
+  type: 'bar',
+  data: {
+    labels,
+    datasets: [
+      {
+        label: 'Sales ($)',
+        data: salesData,
+        backgroundColor: 'rgba(108,99,255,0.7)',
+        yAxisID: 'y',
+        order: 2,
+      },
+      {
+        label: 'Spend ($)',
+        data: spendData,
+        backgroundColor: 'rgba(59,130,246,0.5)',
+        yAxisID: 'y',
+        order: 3,
+      },
+      {
+        label: 'ROAS',
+        data: roasData,
+        type: 'line',
+        borderColor: '#22c55e',
+        backgroundColor: 'rgba(34,197,94,0.1)',
+        pointRadius: 2,
+        borderWidth: 2,
+        yAxisID: 'y2',
+        order: 1,
+        tension: 0.3,
+      }
+    ]
+  },
+  options: {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+      legend: {
+        labels: { color: '#8892a4', font: { size: 11 } }
+      },
+      tooltip: { mode: 'index', intersect: false }
+    },
+    scales: {
+      x: {
+        ticks: { color: '#8892a4', font: { size: 10 }, maxRotation: 45 },
+        grid: { color: 'rgba(255,255,255,0.04)' }
+      },
+      y: {
+        position: 'left',
+        ticks: { color: '#8892a4', font: { size: 11 }, callback: v => '$'+v },
+        grid: { color: 'rgba(255,255,255,0.06)' },
+        title: { display: true, text: 'Sales / Spend ($)', color: '#8892a4', font: { size: 10 } }
+      },
+      y2: {
+        position: 'right',
+        ticks: { color: '#22c55e', font: { size: 11 }, callback: v => v+'x' },
+        grid: { drawOnChartArea: false },
+        title: { display: true, text: 'ROAS', color: '#22c55e', font: { size: 10 } }
+      }
+    }
+  }
+});
+
+// P&L monthly chart
+const plMonths = ['Aug 24','Sep 24','Oct 24','Nov 24','Dec 24','Jan 25','Feb 25','Mar 25','Apr 25','May 25','Jun 25','Jul 25','Aug 25','Sep 25','Oct 25','Nov 25','Dec 25','Jan 26','Feb 26','Mar 26','Apr 26'];
+const plRevenue = [5508,6058.8,4131,6609.6,10876.56,7014.6,18483.12,1141.2,8746.8,21633.48,19560.72,29885.04,19921.44,23744.76,14650.92,9182.76,6090.48,0,23955.24,32546.64,31902.62];
+const plProfit  = [2538.2,2905.55,1929.78,3156.64,4813.34,2862.19,6378.88,511.29,3789.36,9311.41,8308.57,12219.96,8175.05,9510.65,5693.29,2941.69,2147.03,0,10789.4,15946.34,18348.24];
+
+const plCtx = document.getElementById('plChart').getContext('2d');
+new Chart(plCtx, {
+  type: 'bar',
+  data: {
+    labels: plMonths,
+    datasets: [
+      { label: 'Revenue', data: plRevenue, backgroundColor: 'rgba(108,99,255,0.6)', order: 2 },
+      { label: 'Profit',  data: plProfit,  backgroundColor: 'rgba(34,197,94,0.75)',  order: 1 },
+    ]
+  },
+  options: {
+    responsive: true, maintainAspectRatio: false,
+    plugins: { legend: { labels: { color:'#8892a4', font:{size:11} } }, tooltip: { mode:'index', intersect:false,
+      callbacks: { label: ctx => ` ${ctx.dataset.label}: $${ctx.parsed.y.toLocaleString()}` } } },
+    scales: {
+      x: { ticks:{ color:'#8892a4', font:{size:10}, maxRotation:45 }, grid:{ color:'rgba(255,255,255,0.04)' } },
+      y: { ticks:{ color:'#8892a4', font:{size:10}, callback: v => '$'+v.toLocaleString() }, grid:{ color:'rgba(255,255,255,0.05)' } }
+    }
+  }
+});
+
+const plMargins = [0.46,0.48,0.47,0.48,0.44,0.41,0.35,0.45,0.43,0.43,0.42,0.41,0.41,0.40,0.39,0.32,0.35,0,0.45,0.49,0.58];
+const mCtx = document.getElementById('marginChart').getContext('2d');
+new Chart(mCtx, {
+  type: 'line',
+  data: {
+    labels: plMonths,
+    datasets: [{
+      label: 'Net Margin',
+      data: plMargins.map(v => +(v*100).toFixed(1)),
+      borderColor: '#22c55e',
+      backgroundColor: 'rgba(34,197,94,0.08)',
+      pointRadius: 3,
+      pointBackgroundColor: plMargins.map(v => v >= 0.50 ? '#22c55e' : v >= 0.40 ? '#f59e0b' : '#ef4444'),
+      borderWidth: 2, tension: 0.3, fill: true,
+    }]
+  },
+  options: {
+    responsive: true, maintainAspectRatio: false,
+    plugins: { legend: { display: false },
+      tooltip: { callbacks: { label: ctx => ` Margin: ${ctx.parsed.y}%` } } },
+    scales: {
+      x: { ticks:{ color:'#8892a4', font:{size:10}, maxRotation:45 }, grid:{ color:'rgba(255,255,255,0.04)' } },
+      y: { min:0, max:70, ticks:{ color:'#8892a4', font:{size:10}, callback: v => v+'%' }, grid:{ color:'rgba(255,255,255,0.05)' } }
+    }
+  }
+});
+
+// Forecast chart
+const fctx = document.getElementById('forecastChart').getContext('2d');
+new Chart(fctx, {
+  type: 'line',
+  data: {
+    labels: ['Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
+    datasets: [
+      { label: 'Meow Manor XL White', data: [103,113,123,116,144,165,null], borderColor:'#6c63ff', backgroundColor:'rgba(108,99,255,0.08)', tension:0.3, pointRadius:3, borderWidth:2 },
+      { label: 'Meow Manor Black XL', data: [54,62,70,69,87,99,null], borderColor:'#3b82f6', backgroundColor:'rgba(59,130,246,0.08)', tension:0.3, pointRadius:3, borderWidth:2 },
+      { label: 'Wall Entry Meow Manor', data: [47,54,61,60,76,86,null], borderColor:'#22c55e', backgroundColor:'rgba(34,197,94,0.08)', tension:0.3, pointRadius:3, borderWidth:2 },
+      { label: 'Meow Manor Legacy', data: [59,58,60,58,66,81,null], borderColor:'#a78bfa', backgroundColor:'rgba(167,139,250,0.08)', tension:0.3, pointRadius:3, borderWidth:2 },
+      { label: 'French Door White (OOS)', data: [12,40,42,38,46,54,null], borderColor:'#ef4444', backgroundColor:'rgba(239,68,68,0.08)', tension:0.3, pointRadius:3, borderWidth:2, borderDash:[5,4] },
+      { label: 'French Door Black (OOS)', data: [10,35,36,33,40,46,null], borderColor:'#f97316', backgroundColor:'rgba(249,115,22,0.08)', tension:0.3, pointRadius:3, borderWidth:2, borderDash:[5,4] },
+      { label: 'Meow Manor Brown ⚠️', data: [62,65,68,61,75,86,null], borderColor:'#f59e0b', backgroundColor:'rgba(245,158,11,0.08)', tension:0.3, pointRadius:3, borderWidth:2 },
+    ]
+  },
+  options: {
+    responsive: true, maintainAspectRatio: false,
+    plugins: {
+      legend: { labels: { color:'#8892a4', font:{ size:10 }, boxWidth:12 } },
+      tooltip: { mode:'index', intersect:false }
+    },
+    scales: {
+      x: { ticks:{ color:'#8892a4', font:{size:11} }, grid:{ color:'rgba(255,255,255,0.04)' } },
+      y: { ticks:{ color:'#8892a4', font:{size:11} }, grid:{ color:'rgba(255,255,255,0.06)' }, title:{ display:true, text:'Forecasted Units', color:'#8892a4', font:{size:10} } }
+    }
+  }
+});
+</script>
+</body>
+</html>
