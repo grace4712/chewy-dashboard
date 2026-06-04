@@ -240,50 +240,180 @@ tr:hover td { background: rgba(255,255,255,.02); }
 
 <!-- ══ TAB 3: AD MANAGEMENT ══ -->
 <div id="tab-ads" class="content">
-  <div class="kpi-grid kpi-6">
-    <div class="kpi"><div class="label">30-Day Spend</div><div class="value warn">$99.20</div><div class="sub warn">Budget cap hit</div></div>
-    <div class="kpi"><div class="label">Direct Sales</div><div class="value">$1,058.60</div></div>
-    <div class="kpi"><div class="label">ROAS</div><div class="value good">10.67x</div></div>
-    <div class="kpi"><div class="label">Avg CPC</div><div class="value good">$0.50</div><div class="sub good">Bid up room available</div></div>
-    <div class="kpi"><div class="label">Avg Position</div><div class="value warn">11.3</div></div>
-    <div class="kpi"><div class="label">Conversion Rate</div><div class="value good">14.1%</div></div>
+
+  <!-- WEEKLY BUDGET DECISION PANEL -->
+  <div style="background:rgba(108,99,255,.07);border:1px solid rgba(108,99,255,.3);border-radius:10px;padding:18px 22px;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
+      <div>
+        <div style="font-size:11px;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:.6px;margin-bottom:3px;">💰 This Week's Budget Recommendation</div>
+        <div style="font-size:12px;color:var(--muted);">Based on current inventory, ROAS data, and campaign status — updated Jun 4, 2026</div>
+      </div>
+      <div style="text-align:right;">
+        <div style="font-size:11px;color:var(--muted);margin-bottom:2px;">Current active spend</div>
+        <div style="font-size:22px;font-weight:700;color:var(--yellow);">$100<span style="font-size:13px;font-weight:400;color:var(--muted);">/mo</span></div>
+        <div style="font-size:11px;color:var(--muted);">Recommended:</div>
+        <div style="font-size:22px;font-weight:700;color:var(--green);">$450<span style="font-size:13px;font-weight:400;color:var(--muted);">/mo</span></div>
+      </div>
+    </div>
+    <table>
+      <thead><tr><th>Campaign</th><th>Products</th><th>Current Budget</th><th>Status</th><th>Inventory Gate</th><th>Recommended Budget</th><th>Priority Action</th></tr></thead>
+      <tbody>
+        <tr style="background:rgba(34,197,94,.04);">
+          <td style="font-weight:600;">FRD — Fairy White</td>
+          <td style="font-size:11px;color:var(--muted);">SKU 1381150 · $34.95</td>
+          <td>$100/mo</td>
+          <td><span class="pill pill-green">Active</span></td>
+          <td><span class="pill pill-green">✓ In stock</span></td>
+          <td style="font-weight:700;color:var(--green);">$250/mo</td>
+          <td><span class="pill pill-green">↑ Raise + split out</span></td>
+        </tr>
+        <tr style="background:rgba(245,158,11,.03);">
+          <td style="font-weight:600;">FRD — Fairy Blue</td>
+          <td style="font-size:11px;color:var(--muted);">SKU 1381166 · $29.95</td>
+          <td style="color:var(--muted);">Shared w/ White</td>
+          <td><span class="pill pill-yellow">Needs split</span></td>
+          <td><span class="pill pill-green">✓ In stock</span></td>
+          <td style="font-weight:700;color:var(--yellow);">$50/mo</td>
+          <td><span class="pill pill-yellow">Split campaign, pause "cat door" kw</span></td>
+        </tr>
+        <tr style="background:rgba(34,197,94,.04);">
+          <td style="font-weight:600;">MMXL — Meow Manor XL</td>
+          <td style="font-size:11px;color:var(--muted);">XL White 167 OH · XL Brown 102 OH</td>
+          <td>$100/mo (paused)</td>
+          <td><span class="pill pill-yellow">Paused</span></td>
+          <td><span class="pill pill-green">✓ Healthy (167 + 102 OH)</span></td>
+          <td style="font-weight:700;color:var(--green);">$100/mo</td>
+          <td><span class="pill pill-green">▶ Activate now</span></td>
+        </tr>
+        <tr>
+          <td style="font-weight:600;">GD — Gnome Door</td>
+          <td style="font-size:11px;color:var(--muted);">SKUs 1381254, 1381262</td>
+          <td>$200/mo (paused)</td>
+          <td><span class="pill pill-yellow">Paused</span></td>
+          <td><span class="pill pill-yellow">⚠️ Inventory unknown</span></td>
+          <td style="font-weight:700;color:var(--yellow);">$50/mo (test)</td>
+          <td><span class="pill pill-yellow">Verify stock first, then test</span></td>
+        </tr>
+        <tr>
+          <td style="font-weight:600;">Meow Manor</td>
+          <td style="font-size:11px;color:var(--muted);">Lg variants — Black has shortfall</td>
+          <td>$200/mo (paused)</td>
+          <td><span class="pill pill-red">Blocked</span></td>
+          <td><span class="pill pill-red">⛔ Black: 19 OH, PO shortfall</span></td>
+          <td style="font-weight:700;color:var(--red);">$0 — hold</td>
+          <td><span class="pill pill-red">Hold until Black restocked</span></td>
+        </tr>
+        <tr>
+          <td style="font-weight:600;">FD — French Door</td>
+          <td style="font-size:11px;color:var(--muted);">SKUs 1381182, 1381198, 1381190</td>
+          <td>$100/mo (paused)</td>
+          <td><span class="pill pill-red">Blocked</span></td>
+          <td><span class="pill pill-red">⛔ All 3 SKUs OOS</span></td>
+          <td style="font-weight:700;color:var(--red);">$0 — hold</td>
+          <td><span class="pill pill-red">Activate only after restock</span></td>
+        </tr>
+      </tbody>
+    </table>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px;">
+      <div style="background:rgba(34,197,94,.06);border:1px solid rgba(34,197,94,.2);border-radius:8px;padding:10px 14px;font-size:12px;color:var(--text);">✅ <strong>Immediate wins:</strong> (1) Raise FRD budget to $250 for Fairy White — 10.26x ROAS leaves huge money on table. (2) Activate MMXL at $100 — Meow Manor XL White is your 2nd biggest halo SKU and already has an active campaign structure. Both can be done in Chewy Ads today.</div>
+      <div style="background:rgba(108,99,255,.06);border:1px solid rgba(108,99,255,.2);border-radius:8px;padding:10px 14px;font-size:12px;color:var(--text);">💡 <strong>Structural fix needed:</strong> FRD currently mixes Fairy White (13.12x ROAS) and Fairy Blue (5.67x ROAS) in one campaign. White is subsidizing Blue's waste. Splitting them into separate campaigns gives you budget control per product — White gets more, Blue gets less and pauses bad keywords.</div>
+    </div>
+  </div>
+
+  <!-- ACTIVE CAMPAIGN METRICS -->
+  <div>
+    <div class="sec">Active Campaign — FRD (May 4 – Jun 3, 2026)</div>
+    <div class="kpi-grid kpi-6">
+      <div class="kpi"><div class="label">Spend</div><div class="value warn">$100.75</div><div class="sub warn">Cap hit ($100 budget)</div></div>
+      <div class="kpi"><div class="label">Direct Sales</div><div class="value">$1,033.60</div></div>
+      <div class="kpi"><div class="label">ROAS</div><div class="value good">10.26x</div><div class="sub good">Break-even: 2.42x ✓</div></div>
+      <div class="kpi"><div class="label">Avg CPC</div><div class="value good">$0.50</div><div class="sub good">Minimum bid — room to raise</div></div>
+      <div class="kpi"><div class="label">Avg Position</div><div class="value warn">11.24</div><div class="sub warn">Page 2 — bid up to $0.80+</div></div>
+      <div class="kpi"><div class="label">New to Brand</div><div class="value good">23 / 25</div><div class="sub good">92% new customers</div></div>
+    </div>
   </div>
 
   <div class="card"><h3>Daily Spend vs. Sales &amp; ROAS (May 4 – Jun 2)</h3><div class="chart-wrap h240"><canvas id="ad-daily"></canvas></div></div>
 
+  <!-- CAMPAIGN SPLIT ANALYSIS -->
+  <div class="card" style="border-color:var(--accent);">
+    <h3>⚡ FRD Campaign: Split White vs. Blue (Action Required)</h3>
+    <div style="font-size:12px;color:var(--muted);margin-bottom:14px;">White and Blue are in the same campaign — White's strong ROAS is masking Blue's waste. Splitting them unlocks independent budget control.</div>
+    <div class="card-row col-2" style="gap:20px;">
+      <div>
+        <table>
+          <thead><tr><th>Metric</th><th style="color:var(--accent);">Fairy White</th><th style="color:var(--blue);">Fairy Blue</th></tr></thead>
+          <tbody>
+            <tr><td>Spend (30d)</td><td>$66.60</td><td>$32.60</td></tr>
+            <tr><td>Direct Sales</td><td style="color:var(--green);font-weight:600;">$873.85</td><td style="color:var(--yellow);">$184.75</td></tr>
+            <tr><td>ROAS</td><td><span class="pill pill-green">13.12x</span></td><td><span class="pill pill-yellow">5.67x</span></td></tr>
+            <tr><td>Conversion Rate</td><td>17.3%</td><td>7.7%</td></tr>
+            <tr><td>Orders</td><td>21</td><td>5</td></tr>
+            <tr><td>Profit / ad $</td><td style="color:var(--green);font-weight:600;">$4.38</td><td style="color:var(--yellow);">$1.33</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div>
+        <div style="font-size:12px;font-weight:600;color:#fff;margin-bottom:8px;">Recommended campaign structure:</div>
+        <div style="display:flex;flex-direction:column;gap:8px;">
+          <div style="background:rgba(34,197,94,.07);border:1px solid rgba(34,197,94,.2);border-radius:8px;padding:10px 14px;">
+            <div style="font-size:12px;font-weight:700;color:var(--green);">New: "FRW - Fairy White - cat door"</div>
+            <div style="font-size:11px;color:var(--muted);margin-top:4px;">Budget: $250/mo · Bid: $0.80 CPC<br>Keywords: "cat door", "cat door interior door"<br>Expected: ~$2,500 sales at ~10x ROAS</div>
+          </div>
+          <div style="background:rgba(59,130,246,.07);border:1px solid rgba(59,130,246,.2);border-radius:8px;padding:10px 14px;">
+            <div style="font-size:12px;font-weight:700;color:var(--blue);">New: "FRB - Fairy Blue - non-boosted only"</div>
+            <div style="font-size:11px;color:var(--muted);margin-top:4px;">Budget: $50/mo · Keep CPC $0.50<br>Keywords: non-boosted only (pause "cat door" on Blue)<br>Blue converts at 14.8% on non-boosted — keep that, drop paid "cat door"</div>
+          </div>
+          <div style="background:rgba(34,197,94,.07);border:1px solid rgba(34,197,94,.2);border-radius:8px;padding:10px 14px;">
+            <div style="font-size:12px;font-weight:700;color:var(--green);">Activate: "MMXL - Meow Manor XL"</div>
+            <div style="font-size:11px;color:var(--muted);margin-top:4px;">Budget: $100/mo · Bid: $0.60 CPC<br>Keywords: "extra large cat door", "cat door" (already set up)<br>167 OH in stock, was 3rd-most halo-purchased product</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div style="margin-top:14px;background:rgba(108,99,255,.06);border:1px solid rgba(108,99,255,.2);border-radius:8px;padding:10px 14px;font-size:12px;color:var(--text);">
+      📊 <strong>Projected impact of restructure:</strong> Current: $100 spend → $1,034 sales. After split + MMXL activation: $400 spend → ~$3,800–4,200 sales. That's +$2,800–$3,200 in monthly revenue from campaigns you already set up — you just need to flip the switches and adjust the budgets.
+    </div>
+  </div>
+
+  <!-- KEYWORD PERFORMANCE -->
   <div class="card-row col-2">
     <div class="card">
-      <h3>Product Performance</h3>
-      <table>
-        <thead><tr><th>Product</th><th>Spend</th><th>Sales</th><th>ROAS</th><th>CVR</th><th>Orders</th></tr></thead>
-        <tbody>
-          <tr><td><div style="font-weight:600;">Fairy White, Large</div><div style="font-size:11px;color:var(--muted);">SKU 1381150 · $34.95</div></td><td>$66.60</td><td>$873.85</td><td><span class="pill pill-green">13.12x</span></td><td>17.3%</td><td>21</td></tr>
-          <tr><td><div style="font-weight:600;">Fairy Blue, Large</div><div style="font-size:11px;color:var(--muted);">SKU 1381166 · $29.95</div></td><td>$32.60</td><td>$184.75</td><td><span class="pill pill-yellow">5.67x</span></td><td>7.7%</td><td>5</td></tr>
-        </tbody>
-      </table>
-    </div>
-    <div class="card">
-      <h3>Keyword Performance &amp; Recommendations</h3>
+      <h3>Keyword Performance — Current (FRD Campaign)</h3>
       <table>
         <thead><tr><th>Keyword</th><th>SKU</th><th>Impr.</th><th>CTR</th><th>ROAS</th><th>CVR</th><th>Action</th></tr></thead>
         <tbody>
-          <tr><td><span class="pill pill-blue">cat door</span></td><td style="color:var(--muted);font-size:11px;">White</td><td>3,869</td><td>1.58%</td><td><span class="pill pill-green">9.95x</span></td><td>13.1%</td><td><span class="pill pill-green">Keep</span></td></tr>
-          <tr><td><span class="pill pill-purple">Non-Boosted</span></td><td style="color:var(--muted);font-size:11px;">White</td><td>3,403</td><td>1.79%</td><td><span class="pill pill-green">15.88x</span></td><td>21.3%</td><td><span class="pill pill-green">Scale ↑</span></td></tr>
-          <tr><td><span class="pill pill-blue">cat door int.</span></td><td style="color:var(--muted);font-size:11px;">White</td><td>678</td><td>1.62%</td><td><span class="pill pill-green">15.44x</span></td><td>18.2%</td><td><span class="pill pill-green">↑ Budget</span></td></tr>
-          <tr><td><span class="pill pill-purple">Non-Boosted</span></td><td style="color:var(--muted);font-size:11px;">Blue</td><td>2,359</td><td>1.14%</td><td><span class="pill pill-green">11.47x</span></td><td>14.8%</td><td><span class="pill pill-green">Keep</span></td></tr>
-          <tr><td><span class="pill pill-blue">cat door</span></td><td style="color:var(--muted);font-size:11px;">Blue</td><td>2,919</td><td>0.93%</td><td><span class="pill pill-yellow">2.20x</span></td><td>3.7%</td><td><span class="pill pill-red">⛔ Pause</span></td></tr>
-          <tr><td><span class="pill pill-blue">cat door int.</span></td><td style="color:var(--muted);font-size:11px;">Blue</td><td>603</td><td>1.82%</td><td><span class="pill pill-red">0.00x</span></td><td>0.0%</td><td><span class="pill pill-red">⛔ Pause</span></td></tr>
+          <tr><td><span class="pill pill-purple">Non-Boosted</span></td><td style="color:var(--muted);font-size:11px;">White</td><td>3,403</td><td>1.79%</td><td><span class="pill pill-green">15.88x</span></td><td>21.3%</td><td><span class="pill pill-green">✓ Keep + Scale</span></td></tr>
+          <tr><td><span class="pill pill-blue">cat door int.</span></td><td style="color:var(--muted);font-size:11px;">White</td><td>678</td><td>1.62%</td><td><span class="pill pill-green">15.44x</span></td><td>18.2%</td><td><span class="pill pill-green">✓ Keep + ↑ Bid</span></td></tr>
+          <tr><td><span class="pill pill-blue">cat door</span></td><td style="color:var(--muted);font-size:11px;">White</td><td>3,869</td><td>1.58%</td><td><span class="pill pill-green">9.95x</span></td><td>13.1%</td><td><span class="pill pill-green">✓ Keep</span></td></tr>
+          <tr><td><span class="pill pill-purple">Non-Boosted</span></td><td style="color:var(--muted);font-size:11px;">Blue</td><td>2,359</td><td>1.14%</td><td><span class="pill pill-green">11.47x</span></td><td>14.8%</td><td><span class="pill pill-green">✓ Keep (Blue-only camp.)</span></td></tr>
+          <tr style="background:rgba(239,68,68,.04);"><td><span class="pill pill-blue">cat door</span></td><td style="color:var(--muted);font-size:11px;">Blue</td><td>2,919</td><td>0.93%</td><td><span class="pill pill-yellow">2.20x</span></td><td>3.7%</td><td><span class="pill pill-red">⛔ Pause</span></td></tr>
+          <tr style="background:rgba(239,68,68,.04);"><td><span class="pill pill-blue">cat door int.</span></td><td style="color:var(--muted);font-size:11px;">Blue</td><td>603</td><td>1.82%</td><td><span class="pill pill-red">0.00x</span></td><td>0.0%</td><td><span class="pill pill-red">⛔ Pause</span></td></tr>
+        </tbody>
+      </table>
+      <div class="warn-box" style="margin-top:10px;">⚠️ Blue "cat door" + "cat door interior door" burned ~$13.60 with $0–$13.60 return. Pausing these two keyword/product combos in the restructured campaign immediately frees budget for White.</div>
+    </div>
+    <div class="card">
+      <h3>Paused Campaign Activation Checklist</h3>
+      <table>
+        <thead><tr><th>Campaign</th><th>Blocking Issue</th><th>What's Needed</th><th>Ready?</th></tr></thead>
+        <tbody>
+          <tr style="background:rgba(34,197,94,.04);"><td style="font-weight:600;">MMXL</td><td>Was paused — unclear why</td><td>Just flip on. Meow Manor XL White 167 OH, Brown XL 102 OH.</td><td><span class="pill pill-green">✅ Ready now</span></td></tr>
+          <tr style="background:rgba(245,158,11,.03);"><td style="font-weight:600;">GD</td><td>Inventory unknown for new SKUs</td><td>Confirm OH for 1381254 &amp; 1381262 from warehouse. Then activate.</td><td><span class="pill pill-yellow">⚠️ Verify first</span></td></tr>
+          <tr><td style="font-weight:600;">Meow Manor</td><td>Black (1381110) has 17-unit PO shortfall</td><td>Restock Meow Manor Black to 50+ units, then activate.</td><td><span class="pill pill-red">⛔ Wait for restock</span></td></tr>
+          <tr><td style="font-weight:600;">FD</td><td>All 3 French Door SKUs OOS</td><td>Receive French Door inventory. Activate same day stock arrives.</td><td><span class="pill pill-red">⛔ OOS — hold</span></td></tr>
         </tbody>
       </table>
     </div>
   </div>
 
-  <!-- Scenario Planner -->
+  <!-- SCENARIO PLANNER -->
   <div class="scenario">
-    <h3>🎛️ Ad Scenario Planner</h3>
+    <h3>🎛️ Ad Scenario Planner — Total Portfolio</h3>
+    <div style="font-size:12px;color:var(--muted);margin-bottom:14px;">Model what happens when you raise total ad spend, improve CPC bids, or move to better positions. Based on FRD's historical performance benchmarks.</div>
     <div class="slider-row">
       <div class="slider-group">
-        <label>Monthly Budget ($)</label>
+        <label>Total Monthly Budget ($)</label>
         <input type="range" id="s-budget" min="100" max="1000" step="50" value="100" oninput="updateScenario()">
         <div class="slider-val">$<span id="s-budget-val">100</span></div>
       </div>
@@ -305,24 +435,25 @@ tr:hover td { background: rgba(255,255,255,.02); }
       <div class="s-out"><div class="s-label">Est. ROAS</div><div class="s-val good" id="s-roas">10.67x</div></div>
       <div class="s-out"><div class="s-label">Est. Ad Profit</div><div class="s-val good" id="s-profit">$334</div></div>
     </div>
-    <div class="info-box" id="s-insight" style="margin-top:14px;">📊 At $100/month and $0.50 CPC you're generating $334 in ad-driven profit after all costs. Move the sliders to model changes.</div>
+    <div class="info-box" id="s-insight" style="margin-top:14px;">📊 At $100/month and $0.50 CPC you're generating $334 in ad-driven profit. Try $400/mo to model the recommended restructure.</div>
   </div>
 
+  <!-- HALO EFFECT -->
   <div class="card">
-    <h3>Cross-Sell Halo Effect <span style="font-size:12px;font-weight:400;color:var(--muted);">— products purchased after clicking Fairy White ad</span></h3>
+    <h3>🔁 Cross-Sell Halo Effect <span style="font-size:12px;font-weight:400;color:var(--muted);">— products purchased after clicking Fairy White ad</span></h3>
     <table>
-      <thead><tr><th>Product Purchased</th><th>Units</th><th>Inventory Status</th></tr></thead>
+      <thead><tr><th>Product Purchased</th><th>Units</th><th>Inventory Status</th><th>Has Ad Campaign?</th></tr></thead>
       <tbody>
-        <tr><td>Fairy White, Large (same)</td><td style="color:var(--accent);font-weight:600;">6</td><td>Active</td></tr>
-        <tr><td>Meow Manor Black, Large</td><td style="color:var(--accent);font-weight:600;">4</td><td><span class="pill pill-red">⚠️ 9 DOS — urgent restock</span></td></tr>
-        <tr><td>Meow Manor White, X-Large</td><td style="color:var(--accent);font-weight:600;">3</td><td><span class="pill pill-green">167 OH — healthy</span></td></tr>
-        <tr><td>Wall Entry Meow Manor White</td><td style="color:var(--accent);font-weight:600;">2</td><td><span class="pill pill-green">145 OH — healthy</span></td></tr>
-        <tr><td>Fairy Blue, Large</td><td style="color:var(--accent);font-weight:600;">2</td><td>Active</td></tr>
-        <tr><td>Gnome Blue Green, Large</td><td style="color:var(--accent);font-weight:600;">2</td><td>—</td></tr>
-        <tr><td>Beacon Hill Dog &amp; Cat, White</td><td style="color:var(--accent);font-weight:600;">1</td><td><span class="pill pill-green">85 OH — healthy</span></td></tr>
+        <tr><td>Fairy White, Large (same)</td><td style="color:var(--accent);font-weight:600;">6</td><td><span class="pill pill-green">Active</span></td><td><span class="pill pill-green">✓ FRD</span></td></tr>
+        <tr><td>Meow Manor Black, Large</td><td style="color:var(--accent);font-weight:600;">4</td><td><span class="pill pill-red">⚠️ 9 DOS + PO shortfall</span></td><td><span class="pill pill-red">Campaign paused — blocked</span></td></tr>
+        <tr><td>Meow Manor White, X-Large</td><td style="color:var(--accent);font-weight:600;">3</td><td><span class="pill pill-green">167 OH — healthy</span></td><td><span class="pill pill-yellow">MMXL paused → activate now</span></td></tr>
+        <tr><td>Wall Entry Meow Manor White</td><td style="color:var(--accent);font-weight:600;">2</td><td><span class="pill pill-green">145 OH — healthy</span></td><td><span class="pill pill-purple">No dedicated campaign yet</span></td></tr>
+        <tr><td>Fairy Blue, Large</td><td style="color:var(--accent);font-weight:600;">2</td><td><span class="pill pill-green">Active</span></td><td><span class="pill pill-yellow">FRD (needs split)</span></td></tr>
+        <tr><td>Gnome Blue Green, Large</td><td style="color:var(--accent);font-weight:600;">2</td><td><span class="pill pill-yellow">Inventory unknown</span></td><td><span class="pill pill-yellow">GD paused → verify stock</span></td></tr>
+        <tr><td>Beacon Hill Dog &amp; Cat, White</td><td style="color:var(--accent);font-weight:600;">1</td><td><span class="pill pill-green">85 OH — healthy</span></td><td><span class="pill pill-purple">No campaign — consider adding</span></td></tr>
       </tbody>
     </table>
-    <div class="green-box">🔁 <strong style="color:#fff;">21 halo units</strong> purchased beyond direct conversions — your Fairy White ad lifts the entire catalog.</div>
+    <div class="green-box" style="margin-top:10px;">🔁 <strong style="color:#fff;">21 halo units</strong> purchased beyond direct conversions. Activating MMXL ads would give your #3 halo product (Meow Manor XL White) its own campaign — compounding the lift instead of just capturing spillover.</div>
   </div>
 </div>
 
