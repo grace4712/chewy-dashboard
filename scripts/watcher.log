@@ -1,0 +1,10 @@
+2026-06-04 13:13:08,067  INFO      New Chewy report detected: Chewy Ads - Campaigns.csv
+2026-06-04 13:13:10,077  INFO      Campaigns: spend=$100.75  sales=$1033.60  ROAS=10.26x  position=11.2
+2026-06-04 13:13:10,091  INFO      Dashboard HTML updated (campaigns report, 5 rows)
+2026-06-04 13:13:13,214  INFO      Pushed to GitHub: Auto-update: Chewy Ads - Campaigns.csv (2026-06-04)
+2026-06-04 13:13:13,227  INFO      Archived to: 20260604_131313_Chewy Ads - Campaigns.csv
+2026-06-04 13:18:26,716  INFO      ============================================================
+2026-06-04 13:18:26,717  INFO      Chewy Dashboard Watcher starting up
+2026-06-04 13:18:26,717  INFO      Watching: C:\Users\retai\Downloads
+2026-06-04 13:18:26,718  INFO      Dashboard: C:\Users\retai\OneDrive\Desktop\Claude Code\index.html
+2026-06-04 13:18:26,718  INFO      ============================================================
