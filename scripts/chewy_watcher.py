@@ -20,6 +20,35 @@ from datetime import datetime
 from watchdog.observers import Observer
 from watchdog.events import FileSystemEventHandler
 
+# ── Campaign ID → canonical short name ────────────────────────────────────
+# Campaign IDs never change on rename. Add new entries here whenever a
+# campaign is renamed or a new one is created.
+CAMPAIGN_ID_MAP = {
+    "658335191": "Meow Manor",
+    "658381530": "GD",
+    "658582346": "FRD",
+    "658582354": "MMXL",
+    "658582356": "FD",
+}
+
+# Fuzzy keyword fallback for files that don't carry Campaign ID
+def canonical_campaign(name: str, cid: str = "") -> str:
+    """Return a stable short label regardless of how the campaign was renamed."""
+    if cid and cid in CAMPAIGN_ID_MAP:
+        return CAMPAIGN_ID_MAP[cid]
+    n = name.lower()
+    if "frd" in n or "fairy" in n:
+        return "FRD"
+    if "mmxl" in n or "meow manor xl" in n or "extra large" in n:
+        return "MMXL"
+    if "meow manor" in n:
+        return "Meow Manor"
+    if n.startswith("fd") or "french door" in n:
+        return "FD"
+    if n.startswith("gd") or "gnome door" in n:
+        return "GD"
+    return name  # unknown — use raw name
+
 # ── Paths ──────────────────────────────────────────────────────────────────
 DOWNLOADS_DIR   = Path(r"C:\Users\retai\Downloads")
 DASHBOARD_DIR   = Path(r"C:\Users\retai\OneDrive\Desktop\Claude Code")
@@ -141,7 +170,9 @@ def parse_campaigns(path: Path) -> dict:
     with open(path, newline="", encoding="utf-8-sig") as f:
         for row in csv.DictReader(f):
             # Support both old ('Campaign name'/'Status') and new ('Campaign'/'Current Status') column names
-            name   = (row.get("Campaign") or row.get("Campaign name") or "").strip()
+            raw_name = (row.get("Campaign") or row.get("Campaign name") or "").strip()
+            cid      = (row.get("Campaign ID") or "").strip()
+            name     = canonical_campaign(raw_name, cid)
             status = (row.get("Current Status") or row.get("Status") or "").strip()
             budget = clean_num(row.get("Current Budget") or row.get("Budget") or "0")
             sales  = clean_num(row.get("Direct Sales") or row.get("Direct sales") or "0")
@@ -173,7 +204,9 @@ def parse_keywords(path: Path) -> dict:
     rows = []
     with open(path, newline="", encoding="utf-8-sig") as f:
         for row in csv.DictReader(f):
-            campaign = (row.get("Campaign") or row.get("Campaign name") or "").strip()
+            raw_camp = (row.get("Campaign") or row.get("Campaign name") or "").strip()
+            cid      = (row.get("Campaign ID") or "").strip()
+            campaign = canonical_campaign(raw_camp, cid)
             keyword  = (row.get("Keyword") or row.get("Search term") or "").strip()
             sales    = clean_num(row.get("Direct Sales") or row.get("Direct sales") or "0")
             orders   = int(clean_num(row.get("Total Orders") or row.get("Total orders") or "0"))
@@ -224,9 +257,11 @@ def parse_campaign_weekly(path: Path) -> dict:
     rows = []
     with open(path, newline="", encoding="utf-8-sig") as f:
         for row in csv.DictReader(f):
+            raw_camp = row.get("Campaign", "").strip()
+            cid      = row.get("Campaign ID", "").strip()
             rows.append({
                 "week":     row.get("Week Start Date", "").strip(),
-                "campaign": row.get("Campaign", "").strip(),
+                "campaign": canonical_campaign(raw_camp, cid),
                 "status":   row.get("Current Status", "").strip(),
                 "spend":    clean_num(row.get("Spend", "0")),
                 "impr":     int(clean_num(row.get("Impressions", "0"))),
@@ -245,8 +280,10 @@ def parse_purchased(path: Path) -> dict:
     rows = []
     with open(path, newline="", encoding="utf-8-sig") as f:
         for row in csv.DictReader(f):
+            raw_camp = row.get("Campaign", "").strip()
+            cid      = row.get("Campaign ID", "").strip()
             rows.append({
-                "campaign":         row.get("Campaign", "").strip(),
+                "campaign":         canonical_campaign(raw_camp, cid),
                 "promoted_sku":     row.get("Promoted Product", "").strip(),
                 "promoted_name":    row.get("Promoted Product Name", "").strip(),
                 "purchased_sku":    row.get("Purchased Product", "").strip(),
