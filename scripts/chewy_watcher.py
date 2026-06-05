@@ -127,24 +127,45 @@ def clean_num(s):
         return 0.0
     return float(re.sub(r"[^0-9.\-]", "", s) or "0")
 
+def _norm_roas(v):
+    """Chewy ROAS is sometimes a % string ('1025.9' = 10.26x) and sometimes a multiplier ('10.26').
+    If > 20, treat as percentage points and divide by 100. Otherwise use as-is."""
+    return round(v / 100, 2) if v > 20 else round(v, 2)
+
+def _norm_pct(v):
+    """CTR/CVR in new Chewy exports are raw decimals (0.0194 = 1.94%). Normalise to %."""
+    return round(v * 100, 2) if v < 1.0 else round(v, 2)
+
 def parse_campaigns(path: Path) -> dict:
     rows = []
     with open(path, newline="", encoding="utf-8-sig") as f:
         for row in csv.DictReader(f):
+            # Support both old ('Campaign name'/'Status') and new ('Campaign'/'Current Status') column names
+            name   = (row.get("Campaign") or row.get("Campaign name") or "").strip()
+            status = (row.get("Current Status") or row.get("Status") or "").strip()
+            budget = clean_num(row.get("Current Budget") or row.get("Budget") or "0")
+            sales  = clean_num(row.get("Direct Sales") or row.get("Direct sales") or "0")
+            orders = int(clean_num(row.get("Total Orders") or row.get("Total orders") or "0"))
+            ntb    = int(clean_num(row.get("NTB Customers") or row.get("New to brand") or "0"))
+            pos    = clean_num(row.get("Avg Position") or row.get("Avg position") or "0")
+            ctr_raw = clean_num(row.get("CTR") or "0")
+            roas_raw = clean_num(row.get("Direct ROAS") or "0")
+            if not name:
+                continue
             rows.append({
-                "name":     row.get("Campaign name", "").strip(),
-                "status":   row.get("Status", "").strip(),
-                "budget":   clean_num(row.get("Budget", "0")),
-                "spend":    clean_num(row.get("Spend", "0")),
-                "impr":     int(clean_num(row.get("Impressions", "0"))),
-                "clicks":   int(clean_num(row.get("Clicks", "0"))),
-                "roas":     clean_num(row.get("Direct ROAS", "0")),
-                "sales":    clean_num(row.get("Direct sales", "0")),
-                "orders":   int(clean_num(row.get("Total orders", "0"))),
-                "ntb":      int(clean_num(row.get("New to brand", "0"))),
-                "ctr":      clean_num(row.get("CTR", "0")),
-                "position": clean_num(row.get("Avg position", "0")),
-                "cpc":      clean_num(row.get("CPC", "0")),
+                "name":     name,
+                "status":   status,
+                "budget":   budget,
+                "spend":    clean_num(row.get("Spend") or "0"),
+                "impr":     int(clean_num(row.get("Impressions") or "0")),
+                "clicks":   int(clean_num(row.get("Clicks") or "0")),
+                "roas":     _norm_roas(roas_raw),
+                "sales":    sales,
+                "orders":   orders,
+                "ntb":      ntb,
+                "ctr":      _norm_pct(ctr_raw),
+                "position": pos,
+                "cpc":      clean_num(row.get("CPC") or "0"),
             })
     return {"type": "campaigns", "rows": rows, "source": path.name}
 
@@ -152,20 +173,28 @@ def parse_keywords(path: Path) -> dict:
     rows = []
     with open(path, newline="", encoding="utf-8-sig") as f:
         for row in csv.DictReader(f):
+            campaign = (row.get("Campaign") or row.get("Campaign name") or "").strip()
+            keyword  = (row.get("Keyword") or row.get("Search term") or "").strip()
+            sales    = clean_num(row.get("Direct Sales") or row.get("Direct sales") or "0")
+            orders   = int(clean_num(row.get("Total Orders") or row.get("Total orders") or "0"))
+            pos      = clean_num(row.get("Avg Position") or row.get("Avg position") or "0")
+            ctr_raw  = clean_num(row.get("CTR") or "0")
+            cvr_raw  = clean_num(row.get("CVR") or row.get("Conversion rate") or "0")
+            roas_raw = clean_num(row.get("Direct ROAS") or "0")
             rows.append({
-                "campaign": row.get("Campaign name", "").strip(),
-                "keyword":  row.get("Keyword", row.get("Search term", "")).strip(),
-                "match":    row.get("Match type", "").strip(),
-                "spend":    clean_num(row.get("Spend", "0")),
-                "impr":     int(clean_num(row.get("Impressions", "0"))),
-                "clicks":   int(clean_num(row.get("Clicks", "0"))),
-                "roas":     clean_num(row.get("Direct ROAS", "0")),
-                "sales":    clean_num(row.get("Direct sales", "0")),
-                "orders":   int(clean_num(row.get("Total orders", "0"))),
-                "ctr":      clean_num(row.get("CTR", "0")),
-                "cvr":      clean_num(row.get("CVR", row.get("Conversion rate", "0"))),
-                "position": clean_num(row.get("Avg position", "0")),
-                "cpc":      clean_num(row.get("CPC", "0")),
+                "campaign": campaign,
+                "keyword":  keyword,
+                "match":    (row.get("Match type") or "").strip(),
+                "spend":    clean_num(row.get("Spend") or "0"),
+                "impr":     int(clean_num(row.get("Impressions") or "0")),
+                "clicks":   int(clean_num(row.get("Clicks") or "0")),
+                "roas":     _norm_roas(roas_raw),
+                "sales":    sales,
+                "orders":   orders,
+                "ctr":      _norm_pct(ctr_raw),
+                "cvr":      _norm_pct(cvr_raw),
+                "position": pos,
+                "cpc":      clean_num(row.get("CPC") or "0"),
             })
     return {"type": "keywords", "rows": rows, "source": path.name}
 
@@ -269,13 +298,13 @@ def update_dashboard(data: dict):
     DASHBOARD_HTML.write_text(html, encoding="utf-8")
     log.info("Dashboard HTML updated (%s report, %d rows)", rtype, len(data["rows"]))
 
-def _roas_str(roas_pct):
-    """Chewy exports ROAS as percentage string like '1025.9%' — convert to x value."""
-    return round(roas_pct / 100, 2)
+def _roas_str(r):
+    """ROAS is already normalised to a multiplier by the parsers — just round it."""
+    return round(r, 2)
 
 def _update_campaigns(html, data):
     rows = data["rows"]
-    active = [r for r in rows if r["status"].lower() == "active"]
+    active = [r for r in rows if r["status"].upper() == "ACTIVE"]
     if not active:
         log.warning("No active campaigns found in report — skipping campaign KPI update")
         return html
@@ -287,7 +316,7 @@ def _update_campaigns(html, data):
     total_impr   = sum(r["impr"]   for r in active)
     total_clicks = sum(r["clicks"] for r in active)
     avg_position = (sum(r["position"] * r["clicks"] for r in active) / max(total_clicks, 1))
-    overall_roas = _roas_str(total_sales / total_spend * 100) if total_spend else 0
+    overall_roas = round(total_sales / total_spend, 2) if total_spend else 0
     overall_ctr  = round(total_clicks / total_impr * 100, 2) if total_impr else 0
     overall_cpc  = round(total_spend / total_clicks, 2) if total_clicks else 0
 
@@ -328,8 +357,8 @@ def _update_keywords(html, data):
             return '<span class="pill pill-purple">Non-Boosted</span>'
         return f'<span class="pill pill-blue">{kw[:20]}</span>'
 
-    def roas_pill(roas_pct):
-        r = _roas_str(roas_pct)
+    def roas_pill(r):
+        r = round(r, 2)
         if r >= 8:
             return f'<span class="pill pill-green">{r}x</span>'
         elif r >= 2.42:
@@ -337,8 +366,8 @@ def _update_keywords(html, data):
         else:
             return f'<span class="pill pill-red">{r}x</span>'
 
-    def action(roas_pct, kw):
-        r = _roas_str(roas_pct)
+    def action(r, kw):
+        r = round(r, 2)
         kw_l = kw.lower().strip('"\'')
         if r >= 10:
             return '<span class="pill pill-green">✓ Keep + Scale</span>'
@@ -350,22 +379,29 @@ def _update_keywords(html, data):
             return '<span class="pill pill-red">⛔ Pause</span>'
 
     tbody_rows = "\n".join(
-        f'<tr><td>{kw_pill(r["keyword"])}</td>'
-        f'<td style="color:var(--muted);font-size:11px;">{r["campaign"][:12]}</td>'
+        '<tr>'
+        f'<td>{kw_pill(r["keyword"])}</td>'
+        f'<td style="color:var(--muted);font-size:11px;">{r["campaign"][:14]}</td>'
+        f'<td>${r["spend"]:.2f}</td>'
         f'<td>{r["impr"]:,}</td>'
         f'<td>{r["ctr"]:.2f}%</td>'
         f'<td>{roas_pill(r["roas"])}</td>'
         f'<td>{r["cvr"]:.1f}%</td>'
-        f'<td>{action(r["roas"], r["keyword"])}</td></tr>'
+        f'<td>{action(r["roas"], r["keyword"])}</td>'
+        '</tr>'
         for r in rows[:12]
     )
 
     # Replace the tbody inside "Keyword Performance" table
-    html = re.sub(
+    # Use a placeholder to avoid regex backreference issues with backslashes in replacement
+    placeholder = "___TBODY_PLACEHOLDER___"
+    new_html = re.sub(
         r'(<h3>Keyword Performance[^<]*(?:<[^>]+>)*[^<]*</h3>.*?<tbody>)(.*?)(</tbody>)',
-        r'\g<1>' + tbody_rows + r'\3',
+        r'\g<1>' + placeholder + r'\3',
         html, flags=re.DOTALL, count=1
     )
+    if placeholder in new_html:
+        html = new_html.replace(placeholder, tbody_rows, 1)
     return html
 
 def _aggregate_weekly(data: dict) -> dict:
@@ -538,4 +574,9 @@ def main():
     observer.join()
 
 if __name__ == "__main__":
+    # Single-instance guard: exit silently if already running
+    import ctypes, sys as _sys
+    _mutex = ctypes.windll.kernel32.CreateMutexW(None, True, "ChewyDashboardWatcherMutex")
+    if ctypes.windll.kernel32.GetLastError() == 183:  # ERROR_ALREADY_EXISTS
+        _sys.exit(0)
     main()
