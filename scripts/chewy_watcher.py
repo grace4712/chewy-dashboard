@@ -31,9 +31,9 @@ CAMPAIGN_ID_MAP = {
     "658582356": "FD",
 }
 
-# Fuzzy keyword fallback for files that don't carry Campaign ID
+# Fuzzy keyword fallback — maps any campaign name/ID to a stable short key
 def canonical_campaign(name: str, cid: str = "") -> str:
-    """Return a stable short label regardless of how the campaign was renamed."""
+    """Return a stable short key regardless of how the campaign was renamed."""
     if cid and cid in CAMPAIGN_ID_MAP:
         return CAMPAIGN_ID_MAP[cid]
     n = name.lower()
@@ -48,6 +48,51 @@ def canonical_campaign(name: str, cid: str = "") -> str:
     if n.startswith("gd") or "gnome door" in n:
         return "GD"
     return name  # unknown — use raw name
+
+# ── Live campaign display names (persisted across runs) ────────────────────
+# Maps canonical key -> current raw name as seen in the latest report.
+# Updated whenever a report contains a Campaign ID we recognise.
+DISPLAY_NAMES_FILE = Path(r"C:\Users\retai\OneDrive\Desktop\Claude Code\scripts\campaign_display_names.json")
+
+def load_display_names() -> dict:
+    try:
+        return json.loads(DISPLAY_NAMES_FILE.read_text()) if DISPLAY_NAMES_FILE.exists() else {}
+    except Exception:
+        return {}
+
+def save_display_names(d: dict):
+    DISPLAY_NAMES_FILE.write_text(json.dumps(d, indent=2))
+
+def update_display_names(rows: list) -> bool:
+    """Record the latest raw name for each recognised campaign. Returns True if anything changed."""
+    current = load_display_names()
+    changed = False
+    for r in rows:
+        cid  = r.get("cid", "")
+        raw  = r.get("raw_name", "") or r.get("name", "")
+        key  = CAMPAIGN_ID_MAP.get(cid, "")
+        if key and raw and current.get(key) != raw:
+            current[key] = raw
+            changed = True
+    if changed:
+        save_display_names(current)
+    return changed
+
+def patch_campaign_display_names(html: str) -> str:
+    """If a campaign has been renamed in Chewy (raw name no longer starts with the canonical key),
+    replace the canonical key label in the dashboard with the new display name (truncated to 30 chars)."""
+    names = load_display_names()
+    for key, raw in names.items():
+        # Only patch if the raw name doesn't start with the canonical key
+        # (i.e. the campaign was actually renamed to something different)
+        if raw and not raw.upper().startswith(key.upper()):
+            display = raw[:30].rstrip() + ("…" if len(raw) > 30 else "")
+            html = re.sub(
+                r'(?<=>)' + re.escape(key) + r'(?=\s*[<(—·])',
+                display, html
+            )
+            log.info("Patched campaign label: '%s' -> '%s'", key, display)
+    return html
 
 # ── Paths ──────────────────────────────────────────────────────────────────
 DOWNLOADS_DIR   = Path(r"C:\Users\retai\Downloads")
@@ -185,6 +230,8 @@ def parse_campaigns(path: Path) -> dict:
                 continue
             rows.append({
                 "name":     name,
+                "raw_name": raw_name,
+                "cid":      cid,
                 "status":   status,
                 "budget":   budget,
                 "spend":    clean_num(row.get("Spend") or "0"),
@@ -325,6 +372,9 @@ def update_dashboard(data: dict):
     elif rtype == "purchased":
         html = _update_purchased(html, data)
 
+    # Always patch campaign display names with latest names from reports
+    html = patch_campaign_display_names(html)
+
     # Always bump the "Last updated" badge
     html = re.sub(
         r'(Last updated: )[^<"]+',
@@ -341,6 +391,9 @@ def _roas_str(r):
 
 def _update_campaigns(html, data):
     rows = data["rows"]
+    # Record latest display names for any row that carries a Campaign ID
+    if update_display_names(rows):
+        log.info("Campaign display names updated: %s", load_display_names())
     active = [r for r in rows if r["status"].upper() == "ACTIVE"]
     if not active:
         log.warning("No active campaigns found in report — skipping campaign KPI update")

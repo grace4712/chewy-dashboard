@@ -1082,7 +1082,7 @@ function updatePO(){
 document.addEventListener('DOMContentLoaded',()=>{ updatePO(); initTasks(); });
 
 // ── Tasks ──
-const TASK_KEY = 'pp_tasks_v2';
+const TASK_KEY = 'pp_tasks_v3';
 const GROUP_META = {
   today:     { label:'🔴 Do Today',                color:'var(--red)',    bg:'rgba(239,68,68,.06)',   border:'rgba(239,68,68,.2)' },
   week:      { label:'🟡 This Week — Ads',         color:'var(--yellow)', bg:'rgba(245,158,11,.06)', border:'rgba(245,158,11,.2)' },
@@ -1105,6 +1105,7 @@ const DEFAULT_TASKS = [
   { id:'t12', group:'data',      text:'Upload CPFR spreadsheet to dashboard so Fairy Door inventory populates', owner:'Lisa',  done:false },
   { id:'t13', group:'data',      text:'Upload historical PPC reports (months of daily data) for seasonality analysis', owner:'Lisa',  done:false },
   { id:'t14', group:'data',      text:'Build email → auto-upload pipeline for daily PPC reports', owner:'—',    done:false },
+  { id:'t15', group:'week',      text:'Create dedicated keyword campaigns for Chewy autocomplete gaps: (1) "cat door for door" — add to FRD + MMXL now; (2) "cat door for window" — test with small budget; (3) "cat doors" — raise bid to get a real sample. Reminder from Jun 5 2026.', owner:'Lisa',  done:false },
 ];
 
 function loadTasks(){
