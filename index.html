@@ -334,6 +334,17 @@ tr:hover td { background: rgba(255,255,255,.02); }
     </div>
   </div>
 
+  <!-- HISTORICAL PERFORMANCE -->
+  <div class="card" style="border-color:rgba(108,99,255,0.4);">
+    <h3>📈 Historical Campaign Performance — Aug 2025 → Jun 2026</h3>
+    <div style="font-size:12px;color:var(--muted);margin-bottom:14px;">Monthly totals across all active campaigns. Gap = Dec 2025–Apr 2026 (all campaigns paused). FRD re-activated May 2026.</div>
+    <div class="chart-wrap" style="height:260px;"><canvas id="ad-history"></canvas></div>
+    <div style="margin-top:12px;background:rgba(245,158,11,.06);border:1px solid rgba(245,158,11,.25);border-radius:8px;padding:10px 14px;font-size:12px;color:var(--text);">
+      ⚡ <strong>The opportunity cost of the pause:</strong> Aug–Nov 2025 — GD + Meow Manor at 9–10x ROAS generated $5,500–$7,300/mo in ad-driven sales on $500–$1,000/mo spend.
+      Currently: FRD alone at $100/mo → ~$1,000/mo. Activating paused campaigns and reaching Nov 2025 spend levels could restore <strong>$4,000–6,000/mo in incremental sales</strong>.
+    </div>
+  </div>
+
   <div class="card"><h3>Daily Spend vs. Sales &amp; ROAS (May 4 – Jun 2)</h3><div class="chart-wrap h240"><canvas id="ad-daily"></canvas></div></div>
 
   <!-- CAMPAIGN SPLIT ANALYSIS -->
@@ -382,15 +393,21 @@ tr:hover td { background: rgba(255,255,255,.02); }
     <div class="card">
       <h3>Keyword Performance — Current (FRD Campaign)</h3>
       <table>
-        <thead><tr><th>Keyword</th><th>SKU</th><th>Impr.</th><th>CTR</th><th>ROAS</th><th>CVR</th><th>Action</th></tr></thead>
-        <tbody><tr><td><span class="pill pill-purple">Non-Boosted</span></td><td style="color:var(--muted);font-size:11px;"></td><td>3,267</td><td>0.02%</td><td><span class="pill pill-red">0.16x</span></td><td>0.2%</td><td><span class="pill pill-red">⛔ Pause</span></td></tr>
-<tr><td><span class="pill pill-blue">cat door</span></td><td style="color:var(--muted);font-size:11px;"></td><td>3,764</td><td>0.02%</td><td><span class="pill pill-red">0.09x</span></td><td>0.1%</td><td><span class="pill pill-red">⛔ Pause</span></td></tr>
-<tr><td><span class="pill pill-blue">cat door</span></td><td style="color:var(--muted);font-size:11px;"></td><td>2,837</td><td>0.01%</td><td><span class="pill pill-red">0.05x</span></td><td>0.1%</td><td><span class="pill pill-red">⛔ Pause</span></td></tr>
-<tr><td><span class="pill pill-purple">Non-Boosted</span></td><td style="color:var(--muted);font-size:11px;"></td><td>2,265</td><td>0.01%</td><td><span class="pill pill-red">0.06x</span></td><td>0.1%</td><td><span class="pill pill-red">⛔ Pause</span></td></tr>
-<tr><td><span class="pill pill-blue">cat door interior do</span></td><td style="color:var(--muted);font-size:11px;"></td><td>674</td><td>0.02%</td><td><span class="pill pill-red">0.13x</span></td><td>0.2%</td><td><span class="pill pill-red">⛔ Pause</span></td></tr>
-<tr><td><span class="pill pill-blue">cat door interior do</span></td><td style="color:var(--muted);font-size:11px;"></td><td>599</td><td>0.02%</td><td><span class="pill pill-red">0.1x</span></td><td>0.2%</td><td><span class="pill pill-red">⛔ Pause</span></td></tr></tbody>
+        <thead><tr><th>Keyword</th><th>SKU</th><th>Spend</th><th>Impr.</th><th>CTR</th><th>ROAS</th><th>CVR</th><th>Action</th></tr></thead>
+        <tbody>
+          <tr style="background:rgba(34,197,94,.04);"><td><span class="pill pill-purple">Non-Boosted</span></td><td style="color:var(--muted);font-size:11px;">White 1381150</td><td>$30.50</td><td>3,137</td><td>1.94%</td><td><span class="pill pill-green">15.88x</span></td><td>18.0%</td><td><span class="pill pill-green">✅ Keep</span></td></tr>
+          <tr style="background:rgba(34,197,94,.04);"><td><span class="pill pill-blue">cat door</span></td><td style="color:var(--muted);font-size:11px;">White 1381150</td><td>$28.60</td><td>3,698</td><td>1.54%</td><td><span class="pill pill-green">7.51x</span></td><td>10.5%</td><td><span class="pill pill-green">✅ White only</span></td></tr>
+          <tr style="background:rgba(239,68,68,.04);"><td><span class="pill pill-blue">cat door</span></td><td style="color:var(--muted);font-size:11px;">Blue 1381166</td><td>$13.10</td><td>2,779</td><td>0.94%</td><td><span class="pill pill-yellow">5.34x</span></td><td>7.7%</td><td><span class="pill pill-red">⛔ Pause Blue</span></td></tr>
+          <tr style="background:rgba(34,197,94,.02);"><td><span class="pill pill-purple">Non-Boosted</span></td><td style="color:var(--muted);font-size:11px;">Blue 1381166</td><td>$12.50</td><td>2,165</td><td>1.15%</td><td><span class="pill pill-yellow">5.99x</span></td><td>8.0%</td><td><span class="pill pill-yellow">⚠️ Keep for now</span></td></tr>
+          <tr style="background:rgba(34,197,94,.04);"><td><span class="pill pill-blue">cat door interior door</span></td><td style="color:var(--muted);font-size:11px;">White 1381150</td><td>$6.00</td><td>678</td><td>1.77%</td><td><span class="pill pill-green">14.15x</span></td><td>16.7%</td><td><span class="pill pill-green">✅ Keep</span></td></tr>
+          <tr style="background:rgba(245,158,11,.03);"><td><span class="pill pill-blue">cat door interior door</span></td><td style="color:var(--muted);font-size:11px;">Blue 1381166</td><td>$6.00</td><td>598</td><td>2.01%</td><td><span class="pill pill-green">9.98x</span></td><td>8.3%</td><td><span class="pill pill-yellow">⚠️ Watch</span></td></tr>
+          <tr style="background:rgba(34,197,94,.04);"><td><span class="pill pill-purple">Non-Boosted</span></td><td style="color:var(--muted);font-size:11px;">MMXL 1381118</td><td>$3.00</td><td>211</td><td>2.84%</td><td><span class="pill pill-green">9.98x</span></td><td>16.7%</td><td><span class="pill pill-green">✅ Activate MMXL</span></td></tr>
+          <tr style="background:rgba(34,197,94,.04);"><td><span class="pill pill-blue">cat door for interior door</span></td><td style="color:var(--muted);font-size:11px;">MM Brown 1381126</td><td>$1.50</td><td>40</td><td>7.50%</td><td><span class="pill pill-green">49.93x</span></td><td>66.7%</td><td><span class="pill pill-green">✅ Scale up</span></td></tr>
+        </tbody>
       </table>
-      <div class="warn-box" style="margin-top:10px;">⚠️ Blue "cat door" + "cat door interior door" burned ~$13.60 with $0–$13.60 return. Pausing these two keyword/product combos in the restructured campaign immediately frees budget for White.</div>
+      <div style="margin-top:10px;background:rgba(239,68,68,.05);border:1px solid rgba(239,68,68,.2);border-radius:8px;padding:9px 13px;font-size:12px;">
+        ⚠️ Blue "cat door" keyword: $13.10 spend → $69.90 sales (5.34x). After campaign split, pause Blue on "cat door" — White converts at 10.5% vs Blue 7.7%. Saves ~$13/mo that flows to White bids.
+      </div>
     </div>
     <div class="card">
       <h3>Paused Campaign Activation Checklist</h3>
@@ -761,6 +778,38 @@ function initAds(){
     {d:'May 29',sp:3.0,sa:39.95,r:13.3},{d:'May 30',sp:2.5,sa:29.95,r:12.0},
     {d:'May 31',sp:2.0,sa:0,r:0},{d:'Jun 1',sp:3.0,sa:34.95,r:11.7},{d:'Jun 2',sp:3.5,sa:94.85,r:27.1}
   ];
+  // ── Historical monthly chart ──
+  // Null values in the gap create a visual break (Dec 2025 – Apr 2026 paused)
+  const hLabels = ['Aug \'25','Sep \'25','Oct \'25','Nov \'25','Dec \'25','Jan \'26','Feb \'26','Mar \'26','Apr \'26','May \'26','Jun \'26'];
+  const hSpend  = [527.76,  551.67,  607.38, 1024.04,    null,    null,    null,    null,    null,   99.70,  199.50];
+  const hSales  = [5501.43, 5644.41, 5631.33, 7291.28,   null,    null,    null,    null,    null,  963.75, 2067.20];
+  const hRoas   = [10.42,   10.23,    9.27,    7.12,     null,    null,    null,    null,    null,    9.67,   10.36];
+  new Chart(document.getElementById('ad-history').getContext('2d'),{type:'bar',
+    data:{labels:hLabels,datasets:[
+      {label:'Ad Sales ($)',data:hSales,backgroundColor:hSales.map((v,i)=>i<=3?'rgba(108,99,255,0.7)':i>=9?'rgba(34,197,94,0.65)':'rgba(255,255,255,0.05)'),yAxisID:'y',order:2},
+      {label:'Ad Spend ($)',data:hSpend,backgroundColor:hSpend.map((v,i)=>i<=3?'rgba(59,130,246,0.55)':i>=9?'rgba(59,130,246,0.45)':'rgba(255,255,255,0.02)'),yAxisID:'y',order:3},
+      {label:'ROAS',data:hRoas,type:'line',borderColor:'#f59e0b',backgroundColor:'rgba(245,158,11,0.07)',pointRadius:hRoas.map(v=>v?5:0),borderWidth:2.5,yAxisID:'y2',order:1,tension:0.3,spanGaps:false}
+    ]},
+    options:{responsive:true,maintainAspectRatio:false,
+      plugins:{
+        legend:{labels:{color:'#8892a4',font:{size:11}}},
+        tooltip:{mode:'index',intersect:false,callbacks:{
+          label:ctx=>{ if(ctx.dataset.label==='ROAS') return ' ROAS: '+(ctx.parsed.y||0)+'x';
+                       return ' '+ctx.dataset.label+': $'+(ctx.parsed.y||0).toLocaleString(); }
+        }},
+        annotation:{annotations:{
+          pauseBox:{type:'box',xMin:3.5,xMax:8.5,backgroundColor:'rgba(239,68,68,0.04)',borderColor:'rgba(239,68,68,0.15)',borderWidth:1,
+            label:{content:'⏸ All campaigns paused',display:true,color:'rgba(239,68,68,0.6)',font:{size:10},position:{x:'center',y:'center'}}}
+        }}
+      },
+      scales:{
+        x:{ticks:{color:'#8892a4',font:{size:10}},grid:{color:'rgba(255,255,255,0.04)'}},
+        y:{position:'left',title:{display:true,text:'$ Spend / Sales',color:'#8892a4',font:{size:10}},ticks:{color:'#8892a4',font:{size:10},callback:v=>'$'+v.toLocaleString()},grid:{color:'rgba(255,255,255,0.05)'}},
+        y2:{position:'right',title:{display:true,text:'ROAS',color:'#f59e0b',font:{size:10}},ticks:{color:'#f59e0b',font:{size:10},callback:v=>v+'x'},grid:{drawOnChartArea:false},min:0,max:14}
+      }
+    }
+  });
+
   new Chart(document.getElementById('ad-daily').getContext('2d'),{type:'bar',
     data:{labels:dd.map(d=>d.d),datasets:[
       {label:'Sales ($)',data:dd.map(d=>d.sa),backgroundColor:'rgba(108,99,255,0.65)',yAxisID:'y',order:2},
