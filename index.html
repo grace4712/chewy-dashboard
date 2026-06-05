@@ -259,50 +259,50 @@ tr:hover td { background: rgba(255,255,255,.02); }
     <table>
       <thead><tr><th>Campaign</th><th>Products</th><th>Current Budget</th><th>Status</th><th>Inventory Gate</th><th>Recommended Budget</th><th>Priority Action</th></tr></thead>
       <tbody>
-        <tr style="background:rgba(34,197,94,.04);">
+        <tr style="opacity:0.65;">
           <td style="font-weight:600;">FRD — Fairy White</td>
           <td style="font-size:11px;color:var(--muted);">SKU 1381150 · $34.95</td>
           <td>$100/mo</td>
-          <td><span class="pill pill-green">Active</span></td>
-          <td><span class="pill pill-green">✓ In stock</span></td>
-          <td style="font-weight:700;color:var(--green);">$250/mo</td>
-          <td><span class="pill pill-green">↑ Raise + split out</span></td>
+          <td><span class="pill pill-yellow">⏸ Paused</span></td>
+          <td><span class="pill pill-red">⛔ Low inventory</span></td>
+          <td style="font-weight:700;color:var(--muted);">$250/mo when restocked</td>
+          <td><span class="pill pill-red">Wait for restock → split → reactivate</span></td>
         </tr>
-        <tr style="background:rgba(245,158,11,.03);">
+        <tr style="opacity:0.65;">
           <td style="font-weight:600;">FRD — Fairy Blue</td>
           <td style="font-size:11px;color:var(--muted);">SKU 1381166 · $29.95</td>
           <td style="color:var(--muted);">Shared w/ White</td>
-          <td><span class="pill pill-yellow">Needs split</span></td>
-          <td><span class="pill pill-green">✓ In stock</span></td>
-          <td style="font-weight:700;color:var(--yellow);">$50/mo</td>
-          <td><span class="pill pill-yellow">Split campaign, pause "cat door" kw</span></td>
+          <td><span class="pill pill-yellow">⏸ Paused</span></td>
+          <td><span class="pill pill-red">⛔ Low inventory</span></td>
+          <td style="font-weight:700;color:var(--muted);">$50/mo when restocked</td>
+          <td><span class="pill pill-yellow">Split campaign, pause "cat door" kw when reactivating</span></td>
         </tr>
-        <tr style="background:rgba(34,197,94,.04);">
+        <tr style="background:rgba(34,197,94,.06);">
           <td style="font-weight:600;">MMXL — Meow Manor XL</td>
           <td style="font-size:11px;color:var(--muted);">XL White 167 OH · XL Brown 102 OH</td>
-          <td>$100/mo (paused)</td>
-          <td><span class="pill pill-yellow">Paused</span></td>
+          <td>$200/mo</td>
+          <td><span class="pill pill-green">✅ Active</span></td>
           <td><span class="pill pill-green">✓ Healthy (167 + 102 OH)</span></td>
-          <td style="font-weight:700;color:var(--green);">$100/mo</td>
-          <td><span class="pill pill-green">▶ Activate now</span></td>
+          <td style="font-weight:700;color:var(--green);">$200/mo ✅</td>
+          <td><span class="pill pill-green">✅ Live — monitor ROAS</span></td>
         </tr>
         <tr>
           <td style="font-weight:600;">GD — Gnome Door</td>
           <td style="font-size:11px;color:var(--muted);">SKU 1381262 (Blue/Green active · Black discontinued)</td>
           <td>$200/mo (paused)</td>
-          <td><span class="pill pill-yellow">Paused</span></td>
+          <td><span class="pill pill-yellow">⏸ Paused</span></td>
           <td><span class="pill pill-yellow">⚠️ Inventory unknown</span></td>
           <td style="font-weight:700;color:var(--yellow);">$50/mo (test)</td>
           <td><span class="pill pill-yellow">Verify stock first, then test</span></td>
         </tr>
-        <tr>
+        <tr style="background:rgba(34,197,94,.04);">
           <td style="font-weight:600;">Meow Manor</td>
           <td style="font-size:11px;color:var(--muted);">Lg variants — Black has shortfall</td>
-          <td>$200/mo (paused)</td>
-          <td><span class="pill pill-red">Blocked</span></td>
-          <td><span class="pill pill-red">⛔ Black: 19 OH, PO shortfall</span></td>
-          <td style="font-weight:700;color:var(--red);">$0 — hold</td>
-          <td><span class="pill pill-red">Hold until Black restocked</span></td>
+          <td>$200/mo</td>
+          <td><span class="pill pill-green">✅ Active</span></td>
+          <td><span class="pill pill-red">⚠️ Black: 19 OH shortfall</span></td>
+          <td style="font-weight:700;color:var(--yellow);">$200/mo — watch closely</td>
+          <td><span class="pill pill-yellow">Monitor; restock Black asap</span></td>
         </tr>
         <tr>
           <td style="font-weight:600;">FD — French Door</td>
@@ -317,7 +317,7 @@ tr:hover td { background: rgba(255,255,255,.02); }
     </table>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px;">
       <div style="background:rgba(34,197,94,.06);border:1px solid rgba(34,197,94,.2);border-radius:8px;padding:10px 14px;font-size:12px;color:var(--text);">🚀 <strong>MMXL is live and performing:</strong> 19.4x ROAS in first days, avg position 5.3 (page 1). Consider raising the bid from $0.50 to $0.65–0.80 to capture more impressions while ROAS is this strong.</div>
-      <div style="background:rgba(108,99,255,.06);border:1px solid rgba(108,99,255,.2);border-radius:8px;padding:10px 14px;font-size:12px;color:var(--text);">💡 <strong>FRD needs restructuring before reactivating:</strong> Split into FRW (Fairy White, $250/mo) and FRB (Fairy Blue, $50/mo). Pause Blue on "cat door" keyword — White converts at 10.5% vs Blue 7.7%. Don't reactivate FRD as-is — split first.</div>
+      <div style="background:rgba(108,99,255,.06);border:1px solid rgba(108,99,255,.2);border-radius:8px;padding:10px 14px;font-size:12px;color:var(--text);">💡 <strong>FRD: reactivate when Fairy White/Blue inventory arrives.</strong> Before turning it back on, split into FRW (Fairy White, $250/mo) and FRB (Fairy Blue, $50/mo) and pause Blue on "cat door" keyword — White converts at 10.5% vs Blue 7.7%. Day-1 restock = day-1 reactivation.</div>
     </div>
   </div>
 
@@ -418,7 +418,7 @@ tr:hover td { background: rgba(255,255,255,.02); }
         <tbody>
           <tr style="background:rgba(34,197,94,.06);"><td style="font-weight:600;">MMXL</td><td><span class="pill pill-green">✅ Active</span></td><td>$200 budget · 19.4x ROAS · pos 5.3 · first weeks</td><td><span class="pill pill-green">Monitor + raise bid</span></td></tr>
           <tr style="background:rgba(34,197,94,.04);"><td style="font-weight:600;">Meow Manor</td><td><span class="pill pill-green">✅ Active</span></td><td>$200 budget · 0 sales so far · new campaign</td><td><span class="pill pill-yellow">Give it 2–3 weeks</span></td></tr>
-          <tr style="background:rgba(245,158,11,.04);"><td style="font-weight:600;">FRD</td><td><span class="pill pill-yellow">⏸ Paused</span></td><td>Was 10.22x ROAS · $96.70 spend last period · split White/Blue before reactivating</td><td><span class="pill pill-yellow">Split + reactivate</span></td></tr>
+          <tr style="background:rgba(245,158,11,.04);"><td style="font-weight:600;">FRD</td><td><span class="pill pill-yellow">⏸ Paused</span></td><td>Manually paused — low Fairy White/Blue inventory · was 10.22x ROAS · split White/Blue before reactivating</td><td><span class="pill pill-red">⛔ Wait for restock</span></td></tr>
           <tr style="background:rgba(245,158,11,.03);"><td style="font-weight:600;">GD</td><td><span class="pill pill-yellow">⏸ Paused</span></td><td>Inventory unknown for 1381262</td><td><span class="pill pill-yellow">Verify stock first</span></td></tr>
           <tr><td style="font-weight:600;">FD</td><td><span class="pill pill-red">⛔ Paused</span></td><td>All 3 French Door SKUs OOS</td><td><span class="pill pill-red">Activate after restock</span></td></tr>
         </tbody>
