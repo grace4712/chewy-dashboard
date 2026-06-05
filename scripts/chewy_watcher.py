@@ -42,41 +42,68 @@ logging.basicConfig(
 log = logging.getLogger("chewy_watcher")
 
 # ── Chewy report filename patterns ────────────────────────────────────────
-CHEWY_PATTERNS = [
-    re.compile(r"(?i)chewy\s*ads?\s*[-–]\s*campaigns?"),
-    re.compile(r"(?i)chewy\s*ads?\s*[-–]\s*keywords?"),
-    re.compile(r"(?i)chewy\s*ads?\s*[-–]\s*products?"),
-    re.compile(r"(?i)chewy\s*ads?\s*[-–]\s*performance"),
-    re.compile(r"(?i)promoted\s*products?.*\.csv$"),
-    re.compile(r"(?i)sponsored\s*products?.*\.csv$"),
-    re.compile(r"(?i)chewy.*report.*\.csv$"),
-    re.compile(r"(?i)chewy.*ads.*\.csv$"),
+# Matches both the Chewy Ads portal export names AND the dated report names
+CHEWY_FILENAME_PATTERNS = [
+    # Portal exports (Chewy Ads - Campaigns.csv etc.)
+    re.compile(r"(?i)chewy\s*ads?\s*[-–]"),
+    # Dated report exports (Promoted_Products_2026-05-05_to_2026-06-03.csv etc.)
+    re.compile(r"(?i)^promoted_products_\d{4}-\d{2}-\d{2}"),
+    re.compile(r"(?i)^purchased_products_\d{4}-\d{2}-\d{2}"),
+    re.compile(r"(?i)^ca?maign_performance.*\d{4}-\d{2}-\d{2}"),   # typo "Camaign" tolerated
+    re.compile(r"(?i)^campaign_performance.*\d{4}-\d{2}-\d{2}"),
+    re.compile(r"(?i)^keyword.*position.*\d{4}-\d{2}-\d{2}"),
+    re.compile(r"(?i)^keyword.*\d{4}-\d{2}-\d{2}"),
 ]
 
-def is_chewy_report(path: Path) -> bool:
-    name = path.name
-    return path.suffix.lower() == ".csv" and any(p.search(name) for p in CHEWY_PATTERNS)
-
-def detect_report_type(path: Path) -> str:
-    """Return 'campaigns', 'keywords', 'products', or 'unknown'."""
-    name = path.name.lower()
-    if "campaign" in name:
-        return "campaigns"
-    if "keyword" in name:
-        return "keywords"
-    if "product" in name or "promoted" in name or "sponsored" in name:
-        return "products"
-    # Peek at header row
+def _peek_is_purrfect(path: Path) -> bool:
+    """Check if the file's first data row has 'purrfect-portal' as advertiser."""
     try:
         with open(path, newline="", encoding="utf-8-sig") as f:
-            header = next(csv.reader(f), [])
-        header_lower = " ".join(h.lower() for h in header)
-        if "campaign name" in header_lower and "keyword" not in header_lower:
-            return "campaigns"
-        if "keyword" in header_lower or "search term" in header_lower:
+            reader = csv.DictReader(f)
+            row = next(reader, {})
+        return row.get("Advertiser", "").strip().lower() == "purrfect-portal"
+    except Exception:
+        return False
+
+def is_chewy_report(path: Path) -> bool:
+    if path.suffix.lower() != ".csv":
+        return False
+    name = path.name
+    # First check by filename
+    if any(p.search(name) for p in CHEWY_FILENAME_PATTERNS):
+        return True
+    # Fallback: peek at content (catches any new report types Chewy adds)
+    return _peek_is_purrfect(path)
+
+def detect_report_type(path: Path) -> str:
+    """Return 'campaigns', 'keywords', 'products', 'purchased', 'campaign_weekly', or 'unknown'."""
+    name = path.name.lower()
+    # Dated export names
+    if name.startswith("promoted_products_"):
+        return "products"
+    if name.startswith("purchased_products_"):
+        return "purchased"
+    if "keyword" in name:
+        return "keywords"
+    if "campaign" in name or "camaign" in name:
+        # Distinguish weekly vs daily vs summary
+        return "campaign_weekly" if "week" in name else "campaigns"
+    # Portal export names / fallback via header
+    try:
+        with open(path, newline="", encoding="utf-8-sig") as f:
+            reader = csv.DictReader(f)
+            headers = reader.fieldnames or []
+            header_lower = " ".join(h.lower() for h in headers)
+        if "keyword" in header_lower:
             return "keywords"
-        if "product" in header_lower or "sku" in header_lower:
+        if "purchased product" in header_lower:
+            return "purchased"
+        if "week start date" in header_lower:
+            return "campaign_weekly"
+        if "promoted product" in header_lower:
             return "products"
+        if "campaign" in header_lower:
+            return "campaigns"
     except Exception:
         pass
     return "unknown"
@@ -164,10 +191,54 @@ def parse_products(path: Path) -> dict:
             })
     return {"type": "products", "rows": rows, "source": path.name}
 
+def parse_campaign_weekly(path: Path) -> dict:
+    rows = []
+    with open(path, newline="", encoding="utf-8-sig") as f:
+        for row in csv.DictReader(f):
+            rows.append({
+                "week":     row.get("Week Start Date", "").strip(),
+                "campaign": row.get("Campaign", "").strip(),
+                "status":   row.get("Current Status", "").strip(),
+                "spend":    clean_num(row.get("Spend", "0")),
+                "impr":     int(clean_num(row.get("Impressions", "0"))),
+                "clicks":   int(clean_num(row.get("Clicks", "0"))),
+                "roas":     clean_num(row.get("Direct ROAS", "0")),
+                "sales":    clean_num(row.get("Direct Sales", "0")),
+                "orders":   int(clean_num(row.get("Total Orders", "0"))),
+                "ntb":      int(clean_num(row.get("NTB Customers", "0"))),
+                "ctr":      clean_num(row.get("CTR", "0")),
+                "position": clean_num(row.get("Avg Position", "0")),
+                "cpc":      clean_num(row.get("CPC", "0")),
+            })
+    return {"type": "campaign_weekly", "rows": rows, "source": path.name}
+
+def parse_purchased(path: Path) -> dict:
+    rows = []
+    with open(path, newline="", encoding="utf-8-sig") as f:
+        for row in csv.DictReader(f):
+            rows.append({
+                "campaign":         row.get("Campaign", "").strip(),
+                "promoted_sku":     row.get("Promoted Product", "").strip(),
+                "promoted_name":    row.get("Promoted Product Name", "").strip(),
+                "purchased_sku":    row.get("Purchased Product", "").strip(),
+                "purchased_name":   row.get("Purchased Product Name", "").strip(),
+                "purchased_cat":    row.get("Purchased Category", "").strip(),
+                "spend":            clean_num(row.get("Spend", "0")),
+                "direct_sales":     clean_num(row.get("Direct Sales", "0")),
+                "direct_units":     int(clean_num(row.get("Direct Units", "0"))),
+                "unique_products":  int(clean_num(row.get("Unique Products Sold", "0"))),
+                "roas":             clean_num(row.get("Direct ROAS", "0")),
+                "cvr":              clean_num(row.get("CVR", "0")),
+                "clicks":           int(clean_num(row.get("Clicks", "0"))),
+            })
+    return {"type": "purchased", "rows": rows, "source": path.name}
+
 PARSERS = {
-    "campaigns": parse_campaigns,
-    "keywords":  parse_keywords,
-    "products":  parse_products,
+    "campaigns":       parse_campaigns,
+    "keywords":        parse_keywords,
+    "products":        parse_products,
+    "campaign_weekly": parse_campaign_weekly,
+    "purchased":       parse_purchased,
 }
 
 # ── Dashboard HTML updater ─────────────────────────────────────────────────
@@ -179,10 +250,14 @@ def update_dashboard(data: dict):
 
     if rtype == "campaigns":
         html = _update_campaigns(html, data)
+    elif rtype == "campaign_weekly":
+        html = _update_campaigns(html, _aggregate_weekly(data))
     elif rtype == "keywords":
         html = _update_keywords(html, data)
     elif rtype == "products":
         html = _update_products(html, data)
+    elif rtype == "purchased":
+        html = _update_purchased(html, data)
 
     # Always bump the "Last updated" badge
     html = re.sub(
@@ -288,6 +363,54 @@ def _update_keywords(html, data):
     # Replace the tbody inside "Keyword Performance" table
     html = re.sub(
         r'(<h3>Keyword Performance[^<]*(?:<[^>]+>)*[^<]*</h3>.*?<tbody>)(.*?)(</tbody>)',
+        r'\g<1>' + tbody_rows + r'\3',
+        html, flags=re.DOTALL, count=1
+    )
+    return html
+
+def _aggregate_weekly(data: dict) -> dict:
+    """Roll up weekly rows into a single campaigns-style summary for KPI patching."""
+    from collections import defaultdict
+    by_camp = defaultdict(lambda: {"spend":0,"sales":0,"orders":0,"ntb":0,"impr":0,"clicks":0,"pos_weighted":0,"status":"ACTIVE","name":""})
+    for r in data["rows"]:
+        c = by_camp[r["campaign"]]
+        c["name"] = r["campaign"]
+        c["status"] = r["status"]
+        c["spend"]  += r["spend"]
+        c["sales"]  += r["sales"]
+        c["orders"] += r["orders"]
+        c["ntb"]    += r["ntb"]
+        c["impr"]   += r["impr"]
+        c["clicks"] += r["clicks"]
+        c["pos_weighted"] += r["position"] * r["clicks"]
+    rows = []
+    for camp, v in by_camp.items():
+        clicks = v["clicks"] or 1
+        rows.append({
+            "name": v["name"], "status": v["status"],
+            "spend": v["spend"], "sales": v["sales"], "orders": v["orders"],
+            "ntb": v["ntb"], "impr": v["impr"], "clicks": v["clicks"],
+            "roas": (v["sales"] / v["spend"] * 100) if v["spend"] else 0,
+            "position": v["pos_weighted"] / clicks,
+            "ctr": (v["clicks"] / v["impr"] * 100) if v["impr"] else 0,
+            "cpc": (v["spend"] / v["clicks"]) if v["clicks"] else 0,
+        })
+    return {"type": "campaigns", "rows": rows, "source": data["source"]}
+
+def _update_purchased(html, data):
+    """Update the halo / cross-sell table with purchased products data."""
+    rows = sorted(data["rows"], key=lambda r: r["direct_units"], reverse=True)
+    if not rows:
+        return html
+    tbody_rows = "\n".join(
+        f'<tr><td>{r["purchased_name"][:35] or r["purchased_sku"]}</td>'
+        f'<td style="color:var(--accent);font-weight:600;">{r["direct_units"]}</td>'
+        f'<td>—</td>'
+        f'<td><span class="pill pill-purple">{r["purchased_cat"][:20]}</span></td></tr>'
+        for r in rows[:10]
+    )
+    html = re.sub(
+        r'(<h3>[^<]*Halo[^<]*(?:<[^>]+>)*[^<]*</h3>.*?<tbody>)(.*?)(</tbody>)',
         r'\g<1>' + tbody_rows + r'\3',
         html, flags=re.DOTALL, count=1
     )
