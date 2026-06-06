@@ -261,6 +261,8 @@ def parse_keywords(path: Path) -> dict:
             ctr_raw  = clean_num(row.get("CTR") or "0")
             cvr_raw  = clean_num(row.get("CVR") or row.get("Conversion rate") or "0")
             roas_raw = clean_num(row.get("Direct ROAS") or "0")
+            # Total Boost: 0 = non-boosted, 0.1 = 10%, 0.21 = 21%, etc.
+            boost_raw = clean_num(row.get("Total Boost") or "0")
             rows.append({
                 "campaign": campaign,
                 "keyword":  keyword,
@@ -275,6 +277,7 @@ def parse_keywords(path: Path) -> dict:
                 "cvr":      _norm_pct(cvr_raw),
                 "position": pos,
                 "cpc":      clean_num(row.get("CPC") or "0"),
+                "boost":    round(boost_raw * 100) if boost_raw < 1.0 else round(boost_raw),
             })
     return {"type": "keywords", "rows": rows, "source": path.name}
 
@@ -436,62 +439,214 @@ def _update_campaigns(html, data):
     return html
 
 def _update_keywords(html, data):
-    # Keyword data is displayed in a table — rebuild the tbody
+    """Rebuild the full keyword table, action summary bar, callout panel, and date label."""
     rows = sorted(data["rows"], key=lambda r: r["spend"], reverse=True)
     if not rows:
         return html
 
-    def kw_pill(kw):
+    # ── Negate classification ──────────────────────────────────────────────
+    NEGATE_TOKENS = ("screen", "dog", " wall", "exterior", "gate", "patio", "sliding",
+                     "outdoor", "window screen", "small pet")
+
+    def _is_negate(kw: str) -> bool:
+        kl = kw.lower()
+        return any(tok in kl for tok in NEGATE_TOKENS)
+
+    # ── Per-row action classification ──────────────────────────────────────
+    def _classify(r) -> str:
+        """Return one of: 'negate', 'raise', 'keep_scale', 'keep', 'monitor'"""
+        kl = r["keyword"].lower().strip('"\'')
+        if _is_negate(r["keyword"]):
+            return "negate"
+        roas = round(r["roas"], 2)
+        pos  = r["position"]
+        spend = r["spend"]
+        # Not enough data → monitor
+        if spend < 2.0 and r["clicks"] < 5:
+            return "monitor"
+        if roas >= 2.42:
+            if pos > 8:         # good ROAS but buried on pg 2
+                return "raise"
+            if roas >= 10:
+                return "keep_scale"
+            return "keep"
+        return "monitor"
+
+    def _action_cell(cls: str, kw: str, r) -> str:
+        pos = r["position"]
+        roas = round(r["roas"], 2)
+        spend = r["spend"]
+        if cls == "negate":
+            return '<span class="pill pill-red">⛔ Negate</span>'
+        if cls == "raise":
+            return f'<span class="pill pill-green">↑ Raise boost (pos {pos:.1f})</span>'
+        if cls == "keep_scale":
+            return '<span class="pill pill-green">✓ Keep + Scale</span>'
+        if cls == "keep":
+            return '<span class="pill pill-green">✓ Keep</span>'
+        if spend < 2.0 and r["clicks"] < 5:
+            return '<span class="pill pill-yellow">Monitor (low data)</span>'
+        return '<span class="pill pill-yellow">Monitor</span>'
+
+    # ── Row bg colour ──────────────────────────────────────────────────────
+    def _row_bg(cls: str) -> str:
+        if cls == "negate":
+            return "background:rgba(239,68,68,.05);"
+        if cls in ("keep_scale", "raise", "keep"):
+            return "background:rgba(34,197,94,.04);"
+        return "background:rgba(245,158,11,.03);"
+
+    # ── Pill helpers ───────────────────────────────────────────────────────
+    def kw_pill(kw: str, cls: str) -> str:
         kw = kw.strip('"').strip("'")
         if not kw or kw.lower() in ("non-boosted", "", "--"):
             return '<span class="pill pill-purple">Non-Boosted</span>'
-        return f'<span class="pill pill-blue">{kw[:20]}</span>'
+        pill_cls = "pill-red" if cls == "negate" else "pill-blue"
+        return f'<span class="pill {pill_cls}">{kw[:24]}</span>'
 
-    def roas_pill(r):
-        r = round(r, 2)
-        if r >= 8:
-            return f'<span class="pill pill-green">{r}x</span>'
-        elif r >= 2.42:
-            return f'<span class="pill pill-yellow">{r}x</span>'
-        else:
-            return f'<span class="pill pill-red">{r}x</span>'
+    def roas_cell(r_val: float) -> str:
+        r_val = round(r_val, 2)
+        if r_val == 0:
+            return '—'
+        cls = "pill-green" if r_val >= 8 else "pill-yellow" if r_val >= 2.42 else "pill-red"
+        return f'<span class="pill {cls}">{r_val}x</span>'
 
-    def action(r, kw):
-        r = round(r, 2)
-        kw_l = kw.lower().strip('"\'')
-        if r >= 10:
-            return '<span class="pill pill-green">✓ Keep + Scale</span>'
-        elif r >= 5:
-            return '<span class="pill pill-green">✓ Keep</span>'
-        elif r >= 2.42:
-            return '<span class="pill pill-yellow">Monitor</span>'
-        else:
-            return '<span class="pill pill-red">⛔ Pause</span>'
+    def pos_cell(pos: float) -> str:
+        if pos == 0:
+            return '—'
+        colour = 'var(--green)' if pos <= 8 else 'var(--yellow)'
+        return f'<td style="color:{colour};">{pos:.1f}</td>'
 
-    tbody_rows = "\n".join(
-        '<tr>'
-        f'<td>{kw_pill(r["keyword"])}</td>'
-        f'<td style="color:var(--muted);font-size:11px;">{r["campaign"][:14]}</td>'
-        f'<td>${r["spend"]:.2f}</td>'
-        f'<td>{r["impr"]:,}</td>'
-        f'<td>{r["ctr"]:.2f}%</td>'
-        f'<td>{roas_pill(r["roas"])}</td>'
-        f'<td>{r["cvr"]:.1f}%</td>'
-        f'<td>{action(r["roas"], r["keyword"])}</td>'
-        '</tr>'
-        for r in rows[:12]
+    def boost_cell(boost: int) -> str:
+        if boost == 0:
+            return '—'
+        return f'{boost}%'
+
+    # ── Build tbody ────────────────────────────────────────────────────────
+    classified = [(r, _classify(r)) for r in rows]
+
+    def _build_row(r, cls):
+        cvr_str = f'{r["cvr"]:.1f}%' if r["cvr"] else '—'
+        return (
+            f'<tr style="{_row_bg(cls)}">'
+            f'<td>{kw_pill(r["keyword"], cls)}</td>'
+            f'<td style="color:var(--muted);font-size:11px;">{r["campaign"][:16]}</td>'
+            f'<td>{boost_cell(r.get("boost", 0))}</td>'
+            + pos_cell(r["position"]) +
+            f'<td>${r["spend"]:.2f}</td>'
+            f'<td>{r["impr"]:,}</td>'
+            f'<td>{r["ctr"]:.2f}%</td>'
+            f'<td>{roas_cell(r["roas"])}</td>'
+            f'<td>{cvr_str}</td>'
+            f'<td>{_action_cell(cls, r["keyword"], r)}</td>'
+            '</tr>'
+        )
+
+    tbody_rows = "\n".join(_build_row(r, cls) for r, cls in classified)
+
+    # ── Action counts for summary bar ──────────────────────────────────────
+    n_raise   = sum(1 for _, c in classified if c == "raise")
+    n_negate  = sum(1 for _, c in classified if c == "negate")
+    n_monitor = sum(1 for _, c in classified if c == "monitor")
+
+    # ── Collect callout lists ──────────────────────────────────────────────
+    raise_items = [
+        f'{r["campaign"]} "{r["keyword"].strip(chr(34)).strip(chr(39))}": {r.get("boost",0)}% → ?? (pos {r["position"]:.1f}, {round(r["roas"],2)}x ROAS)'
+        for r, c in classified if c == "raise"
+    ]
+    negate_items = [
+        f'"{r["keyword"].strip(chr(34)).strip(chr(39))}"'
+        for r, c in classified if c == "negate"
+    ]
+    monitor_items = [
+        f'{r["campaign"]} "{r["keyword"].strip(chr(34)).strip(chr(39))}" ({round(r["roas"],2)}x, {r["clicks"]} clicks)'
+        for r, c in classified if c == "monitor"
+    ]
+
+    raise_html  = "<br>".join(raise_items)  if raise_items  else "None this period"
+    negate_html = " · ".join(negate_items)   if negate_items  else "None this period"
+    monitor_html = "<br>".join(monitor_items[:6]) if monitor_items else "None"
+
+    # ── Extract date range from source filename ────────────────────────────
+    src = data.get("source", "")
+    date_match = re.search(r'(\d{4}-\d{2}-\d{2})_to_(\d{4}-\d{2}-\d{2})', src)
+    if date_match:
+        def _fmt(d):
+            from datetime import datetime as _dt
+            try:
+                return _dt.strptime(d, "%Y-%m-%d").strftime("%b %-d, %Y") if sys.platform != "win32" else _dt.strptime(d, "%Y-%m-%d").strftime("%b %#d, %Y")
+            except Exception:
+                return d
+        kw_date = f"{_fmt(date_match.group(1))} – {_fmt(date_match.group(2))}"
+    else:
+        kw_date = datetime.now().strftime("%b %#d, %Y") if sys.platform == "win32" else datetime.now().strftime("%b %-d, %Y")
+
+    # ── Patch action summary bar (id="kw-action-summary") ─────────────────
+    summary_html = (
+        f'<span style="background:rgba(34,197,94,.1);border:1px solid rgba(34,197,94,.3);border-radius:6px;padding:3px 10px;font-size:11px;color:var(--green);font-weight:600;">↑ Raise boost: {n_raise}</span>'
+        f'<span style="background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.3);border-radius:6px;padding:3px 10px;font-size:11px;color:#f87171;font-weight:600;">⛔ Negate: {n_negate}</span>'
+        f'<span style="background:rgba(245,158,11,.1);border:1px solid rgba(245,158,11,.3);border-radius:6px;padding:3px 10px;font-size:11px;color:var(--yellow);font-weight:600;">👁 Monitor: {n_monitor}</span>'
     )
 
-    # Replace the tbody inside "Keyword Performance" table
-    # Use a placeholder to avoid regex backreference issues with backslashes in replacement
-    placeholder = "___TBODY_PLACEHOLDER___"
+    # ── Callout panel HTML ─────────────────────────────────────────────────
+    callout_html = (
+        '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-top:12px;">'
+        '<div style="background:rgba(34,197,94,.05);border:1px solid rgba(34,197,94,.2);border-radius:8px;padding:10px 14px;font-size:12px;">'
+        '<div style="font-weight:700;color:var(--green);margin-bottom:6px;">↑ Raise Boost</div>'
+        f'<div style="color:var(--text);line-height:1.6;">{raise_html}</div>'
+        '</div>'
+        '<div style="background:rgba(239,68,68,.05);border:1px solid rgba(239,68,68,.2);border-radius:8px;padding:10px 14px;font-size:12px;">'
+        '<div style="font-weight:700;color:#f87171;margin-bottom:6px;">⛔ Add as Negative Keywords</div>'
+        f'<div style="color:var(--text);line-height:1.6;">{negate_html}</div>'
+        '</div>'
+        '<div style="background:rgba(245,158,11,.05);border:1px solid rgba(245,158,11,.2);border-radius:8px;padding:10px 14px;font-size:12px;">'
+        '<div style="font-weight:700;color:var(--yellow);margin-bottom:6px;">👁 Watch Next Period</div>'
+        f'<div style="color:var(--text);line-height:1.6;">{monitor_html}</div>'
+        '</div>'
+        '</div>'
+    )
+
+    placeholder = "___KW_PLACEHOLDER___"
+
+    # 1. Update tbody (id="kw-tbody")
     new_html = re.sub(
-        r'(<h3>Keyword Performance[^<]*(?:<[^>]+>)*[^<]*</h3>.*?<tbody>)(.*?)(</tbody>)',
+        r'(<tbody id="kw-tbody">)(.*?)(</tbody>)',
         r'\g<1>' + placeholder + r'\3',
         html, flags=re.DOTALL, count=1
     )
     if placeholder in new_html:
         html = new_html.replace(placeholder, tbody_rows, 1)
+    else:
+        log.warning("kw-tbody anchor not found — keyword table not updated")
+        return html
+
+    # 2. Update action summary bar (id="kw-action-summary")
+    html = re.sub(
+        r'(<div[^>]+id="kw-action-summary"[^>]*>)(.*?)(</div>)',
+        r'\g<1>' + placeholder + r'\3',
+        html, flags=re.DOTALL, count=1
+    )
+    if placeholder in html:
+        html = html.replace(placeholder, summary_html, 1)
+
+    # 3. Update date label (id="kw-date")
+    html = re.sub(
+        r'(<span[^>]+id="kw-date"[^>]*>)[^<]*(</span>)',
+        r'\g<1>' + kw_date + r'\2',
+        html, count=1
+    )
+
+    # 4. Replace three-column callout panel (between sentinel comments)
+    html = re.sub(
+        r'(<!-- KW-CALLOUT-START -->).*?(<!-- KW-CALLOUT-END -->)',
+        r'\g<1>' + placeholder + r'\g<2>',
+        html, flags=re.DOTALL, count=1
+    )
+    if placeholder in html:
+        html = html.replace(placeholder, '\n    ' + callout_html + '\n    ', 1)
+
+    log.info("Keyword table updated: %d rows | ↑raise=%d ⛔negate=%d 👁monitor=%d",
+             len(rows), n_raise, n_negate, n_monitor)
     return html
 
 def _aggregate_weekly(data: dict) -> dict:
