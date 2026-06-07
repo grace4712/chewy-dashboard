@@ -333,7 +333,7 @@ def parse_campaign_weekly(path: Path) -> dict:
 def parse_campaign_daily(path: Path) -> dict:
     """Parse a Group_by_Day CSV into per-day totals (spend, sales, ROAS)."""
     from collections import defaultdict
-    by_date = defaultdict(lambda: {"spend": 0.0, "sales": 0.0})
+    by_date = defaultdict(lambda: {"spend": 0.0, "sales": 0.0, "units": 0})
     with open(path, newline="", encoding="utf-8-sig") as f:
         for row in csv.DictReader(f):
             date_str = (row.get("Date") or "").strip()
@@ -341,14 +341,16 @@ def parse_campaign_daily(path: Path) -> dict:
                 continue
             spend = clean_num(row.get("Spend") or "0")
             sales = clean_num(row.get("Direct Sales") or "0")
+            units = int(clean_num(row.get("Direct Units") or "0"))
             by_date[date_str]["spend"] += spend
             by_date[date_str]["sales"] += sales
+            by_date[date_str]["units"] += units
     rows = []
     for date_str, v in sorted(by_date.items()):
         sp = round(v["spend"], 2)
         sa = round(v["sales"], 2)
         r  = round(sa / sp, 2) if sp else 0
-        rows.append({"date": date_str, "spend": sp, "sales": sa, "roas": r})
+        rows.append({"date": date_str, "spend": sp, "sales": sa, "roas": r, "units": v["units"]})
     return {"type": "campaign_daily", "rows": rows, "source": path.name}
 
 def parse_purchased(path: Path) -> dict:
@@ -724,7 +726,7 @@ def _update_daily_chart(html, data):
 
     # Build JS array entries
     entries = ",".join(
-        f"{{d:'{_fmt_day(r['date'])}',sp:{r['spend']},sa:{r['sales']},r:{r['roas']}}}"
+        f"{{d:'{_fmt_day(r['date'])}',sp:{r['spend']},sa:{r['sales']},r:{r['roas']},u:{r['units']}}}"
         for r in rows
     )
     dd_js = f"  const dd=[{entries}];"
