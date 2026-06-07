@@ -404,7 +404,7 @@ tr:hover td { background: rgba(255,255,255,.02); }
     </div>
   </div>
 
-  <div class="card"><h3>Daily Spend vs. Sales &amp; ROAS (May 4 – Jun 6)</h3><div class="chart-wrap h240"><canvas id="ad-daily"></canvas></div></div>
+  <div class="card"><h3>Daily Spend vs. Sales &amp; ROAS (<span id="daily-range">May 4 – Jun 6</span>)</h3><div class="chart-wrap h240"><canvas id="ad-daily"></canvas></div></div>
 
   <!-- CAMPAIGN SPLIT ANALYSIS -->
   <div class="card" style="border-color:var(--accent);">
@@ -979,6 +979,7 @@ function initPL(){
 
 // ── Ads tab ──
 function initAds(){
+  // DD-START
   const dd=[
     {d:'May 4',sp:3.5,sa:124.85,r:35.7},{d:'May 5',sp:4.55,sa:44.95,r:9.9},
     {d:'May 6',sp:3.5,sa:0,r:0},{d:'May 7',sp:3.5,sa:0,r:0},{d:'May 8',sp:3.5,sa:0,r:0},
@@ -997,6 +998,7 @@ function initAds(){
     {d:'Jun 3',sp:4.05,sa:99.85,r:24.7},{d:'Jun 4',sp:11.54,sa:194.75,r:16.9},
     {d:'Jun 5',sp:9.05,sa:84.90,r:9.4},{d:'Jun 6',sp:21.20,sa:119.85,r:5.7}
   ];
+  // DD-END
   // ── Historical monthly chart ──
   // Null values in the gap create a visual break (Dec 2025 – Apr 2026 paused)
   const hLabels = ['Aug \'25','Sep \'25','Oct \'25','Nov \'25','Dec \'25','Jan \'26','Feb \'26','Mar \'26','Apr \'26','May \'26','Jun \'26'];

@@ -150,7 +150,8 @@ def is_chewy_report(path: Path) -> bool:
     return _peek_is_purrfect(path)
 
 def detect_report_type(path: Path) -> str:
-    """Return 'campaigns', 'keywords', 'products', 'purchased', 'campaign_weekly', or 'unknown'."""
+    """Return 'campaigns', 'keywords', 'products', 'purchased', 'campaign_weekly',
+    'campaign_daily', or 'unknown'."""
     name = path.name.lower()
     # Dated export names
     if name.startswith("promoted_products_"):
@@ -160,8 +161,11 @@ def detect_report_type(path: Path) -> str:
     if "keyword" in name:
         return "keywords"
     if "campaign" in name or "camaign" in name:
-        # Distinguish weekly vs daily vs summary
-        return "campaign_weekly" if "week" in name else "campaigns"
+        if "week" in name:
+            return "campaign_weekly"
+        if "day" in name:
+            return "campaign_daily"
+        return "campaigns"
     # Portal export names / fallback via header
     try:
         with open(path, newline="", encoding="utf-8-sig") as f:
@@ -326,6 +330,27 @@ def parse_campaign_weekly(path: Path) -> dict:
             })
     return {"type": "campaign_weekly", "rows": rows, "source": path.name}
 
+def parse_campaign_daily(path: Path) -> dict:
+    """Parse a Group_by_Day CSV into per-day totals (spend, sales, ROAS)."""
+    from collections import defaultdict
+    by_date = defaultdict(lambda: {"spend": 0.0, "sales": 0.0})
+    with open(path, newline="", encoding="utf-8-sig") as f:
+        for row in csv.DictReader(f):
+            date_str = (row.get("Date") or "").strip()
+            if not date_str or date_str.upper() == "NULL":
+                continue
+            spend = clean_num(row.get("Spend") or "0")
+            sales = clean_num(row.get("Direct Sales") or "0")
+            by_date[date_str]["spend"] += spend
+            by_date[date_str]["sales"] += sales
+    rows = []
+    for date_str, v in sorted(by_date.items()):
+        sp = round(v["spend"], 2)
+        sa = round(v["sales"], 2)
+        r  = round(sa / sp, 2) if sp else 0
+        rows.append({"date": date_str, "spend": sp, "sales": sa, "roas": r})
+    return {"type": "campaign_daily", "rows": rows, "source": path.name}
+
 def parse_purchased(path: Path) -> dict:
     rows = []
     with open(path, newline="", encoding="utf-8-sig") as f:
@@ -354,6 +379,7 @@ PARSERS = {
     "keywords":        parse_keywords,
     "products":        parse_products,
     "campaign_weekly": parse_campaign_weekly,
+    "campaign_daily":  parse_campaign_daily,
     "purchased":       parse_purchased,
 }
 
@@ -368,6 +394,8 @@ def update_dashboard(data: dict):
         html = _update_campaigns(html, data)
     elif rtype == "campaign_weekly":
         html = _update_campaigns(html, _aggregate_weekly(data))
+    elif rtype == "campaign_daily":
+        html = _update_daily_chart(html, data)
     elif rtype == "keywords":
         html = _update_keywords(html, data)
     elif rtype == "products":
@@ -677,6 +705,58 @@ def _aggregate_weekly(data: dict) -> dict:
             "cpc": (v["spend"] / v["clicks"]) if v["clicks"] else 0,
         })
     return {"type": "campaigns", "rows": rows, "source": data["source"]}
+
+def _update_daily_chart(html, data):
+    """Rebuild the daily spend/sales/ROAS chart (dd array) and update the date range title."""
+    rows = data["rows"]
+    if not rows:
+        return html
+
+    def _fmt_day(iso: str) -> str:
+        """'2026-06-04' → 'Jun 4'"""
+        from datetime import datetime as _dt
+        try:
+            dt = _dt.strptime(iso, "%Y-%m-%d")
+            fmt = "%b %-d" if sys.platform != "win32" else "%b %#d"
+            return dt.strftime(fmt)
+        except Exception:
+            return iso
+
+    # Build JS array entries
+    entries = ",".join(
+        f"{{d:'{_fmt_day(r['date'])}',sp:{r['spend']},sa:{r['sales']},r:{r['roas']}}}"
+        for r in rows
+    )
+    dd_js = f"  const dd=[{entries}];"
+
+    # Date range label for the title
+    first = _fmt_day(rows[0]["date"])
+    last  = _fmt_day(rows[-1]["date"])
+    date_range = f"{first} – {last}"
+
+    placeholder = "___DD_PLACEHOLDER___"
+
+    # 1. Replace dd array between sentinels
+    html = re.sub(
+        r'(// DD-START\s*\n).*?(\s*// DD-END)',
+        r'\g<1>' + placeholder + r'\2',
+        html, flags=re.DOTALL, count=1
+    )
+    if placeholder in html:
+        html = html.replace(placeholder, dd_js + "\n  ", 1)
+    else:
+        log.warning("DD-START/END sentinels not found — daily chart not updated")
+        return html
+
+    # 2. Update the date range span (id="daily-range")
+    html = re.sub(
+        r'(<span id="daily-range">)[^<]*(</span>)',
+        r'\g<1>' + date_range + r'\2',
+        html, count=1
+    )
+
+    log.info("Daily chart updated: %d days (%s)", len(rows), date_range)
+    return html
 
 def _update_purchased(html, data):
     """Update the halo / cross-sell table with purchased products data."""
