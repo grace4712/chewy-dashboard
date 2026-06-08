@@ -210,12 +210,36 @@ def generate(stored: dict) -> str:
 <title>Purrfect Portal — Amazon Market Intelligence</title>
 <script>
 (function(){{
-  var k=sessionStorage.getItem('pp_auth');
-  if(k!=='ok'){{
-    var p=prompt('Enter password to continue:');
-    if(p!=='Ilovecats'){{document.documentElement.innerHTML='<body style="background:#0f1117;color:#8892a4;font-family:sans-serif;display:flex;align-items:center;justify-content:center;height:100vh;margin:0;font-size:16px;">Access denied.</body>';return;}}
-    sessionStorage.setItem('pp_auth','ok');
-  }}
+  if(sessionStorage.getItem('pp_auth')==='ok') return;
+  document.addEventListener('DOMContentLoaded',function(){{
+    var overlay=document.createElement('div');
+    overlay.id='pp-gate';
+    overlay.style.cssText='position:fixed;inset:0;background:#0f1117;z-index:99999;display:flex;align-items:center;justify-content:center;';
+    overlay.innerHTML='<div style="background:#1a1d27;border:1px solid #2a2d3a;border-radius:12px;padding:40px 48px;text-align:center;min-width:320px;">'
+      +'<div style="font-size:28px;margin-bottom:8px;">🐱</div>'
+      +'<div style="color:#fff;font-size:18px;font-weight:700;margin-bottom:6px;">Purrfect Portal</div>'
+      +'<div style="color:#8892a4;font-size:13px;margin-bottom:24px;">Amazon Market Intelligence</div>'
+      +'<input id="pp-pw" type="password" placeholder="Password" style="width:100%;padding:10px 14px;background:#0f1117;border:1px solid #2a2d3a;border-radius:8px;color:#e2e8f0;font-size:14px;outline:none;box-sizing:border-box;" />'
+      +'<div id="pp-err" style="color:#ef4444;font-size:12px;margin-top:8px;min-height:16px;"></div>'
+      +'<button id="pp-btn" style="width:100%;margin-top:12px;padding:10px;background:#6c63ff;border:none;border-radius:8px;color:#fff;font-size:14px;font-weight:600;cursor:pointer;">Enter</button>'
+      +'</div>';
+    document.body.appendChild(overlay);
+    document.body.style.overflow='hidden';
+    function attempt(){{
+      if(document.getElementById('pp-pw').value==='Ilovecats'){{
+        sessionStorage.setItem('pp_auth','ok');
+        overlay.remove();
+        document.body.style.overflow='';
+      }} else {{
+        document.getElementById('pp-err').textContent='Incorrect password.';
+        document.getElementById('pp-pw').value='';
+        document.getElementById('pp-pw').focus();
+      }}
+    }}
+    document.getElementById('pp-btn').addEventListener('click',attempt);
+    document.getElementById('pp-pw').addEventListener('keydown',function(e){{if(e.key==='Enter') attempt();}});
+    document.getElementById('pp-pw').focus();
+  }});
 }})();
 </script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
