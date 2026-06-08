@@ -52,7 +52,8 @@ def canonical_campaign(name: str, cid: str = "") -> str:
 # ── Live campaign display names (persisted across runs) ────────────────────
 # Maps canonical key -> current raw name as seen in the latest report.
 # Updated whenever a report contains a Campaign ID we recognise.
-DISPLAY_NAMES_FILE = Path(r"C:\Users\retai\OneDrive\Desktop\Claude Code\scripts\campaign_display_names.json")
+DISPLAY_NAMES_FILE  = Path(r"C:\Users\retai\OneDrive\Desktop\Claude Code\scripts\campaign_display_names.json")
+DAILY_HISTORY_FILE  = Path(r"C:\Users\retai\OneDrive\Desktop\Claude Code\scripts\daily_history.json")
 
 def load_display_names() -> dict:
     try:
@@ -708,37 +709,52 @@ def _aggregate_weekly(data: dict) -> dict:
         })
     return {"type": "campaigns", "rows": rows, "source": data["source"]}
 
+def _load_daily_history() -> dict:
+    """Load ISO-date keyed history from disk. Returns {} if not found."""
+    try:
+        return json.loads(DAILY_HISTORY_FILE.read_text()) if DAILY_HISTORY_FILE.exists() else {}
+    except Exception:
+        return {}
+
+def _save_daily_history(history: dict):
+    DAILY_HISTORY_FILE.write_text(json.dumps(history, indent=2, sort_keys=True))
+
 def _update_daily_chart(html, data):
-    """Rebuild the daily spend/sales/ROAS chart (dd array) and update the date range title."""
-    rows = data["rows"]
-    if not rows:
+    """Merge new daily rows into history, then rebuild the dd array and date range title."""
+    new_rows = data["rows"]
+    if not new_rows:
         return html
 
+    # ── Merge new rows into persistent history (new data wins for same date) ──
+    history = _load_daily_history()
+    for r in new_rows:
+        history[r["date"]] = {"sp": r["spend"], "sa": r["sales"], "r": r["roas"], "u": r["units"]}
+    _save_daily_history(history)
+
+    # ── Build sorted full-history rows ────────────────────────────────────────
+    all_rows = sorted(history.items())   # [(iso_date, {...}), ...]
+
     def _fmt_day(iso: str) -> str:
-        """'2026-06-04' → 'Jun 4'"""
         from datetime import datetime as _dt
         try:
             dt = _dt.strptime(iso, "%Y-%m-%d")
-            fmt = "%b %-d" if sys.platform != "win32" else "%b %#d"
-            return dt.strftime(fmt)
+            return dt.strftime("%b %#d") if sys.platform == "win32" else dt.strftime("%b %-d")
         except Exception:
             return iso
 
-    # Build JS array entries
     entries = ",".join(
-        f"{{d:'{_fmt_day(r['date'])}',sp:{r['spend']},sa:{r['sales']},r:{r['roas']},u:{r['units']}}}"
-        for r in rows
+        f"{{d:'{_fmt_day(iso)}',sp:{v['sp']},sa:{v['sa']},r:{v['r']},u:{v['u']}}}"
+        for iso, v in all_rows
     )
     dd_js = f"  const dd=[{entries}];"
 
-    # Date range label for the title
-    first = _fmt_day(rows[0]["date"])
-    last  = _fmt_day(rows[-1]["date"])
+    first = _fmt_day(all_rows[0][0])
+    last  = _fmt_day(all_rows[-1][0])
     date_range = f"{first} – {last}"
 
     placeholder = "___DD_PLACEHOLDER___"
 
-    # 1. Replace dd array between sentinels
+    # Replace dd array between sentinels
     html = re.sub(
         r'(// DD-START\s*\n).*?(\s*// DD-END)',
         r'\g<1>' + placeholder + r'\2',
@@ -750,14 +766,15 @@ def _update_daily_chart(html, data):
         log.warning("DD-START/END sentinels not found — daily chart not updated")
         return html
 
-    # 2. Update the date range span (id="daily-range")
+    # Update the date range span
     html = re.sub(
         r'(<span id="daily-range">)[^<]*(</span>)',
         r'\g<1>' + date_range + r'\2',
         html, count=1
     )
 
-    log.info("Daily chart updated: %d days (%s)", len(rows), date_range)
+    log.info("Daily chart updated: %d days total (%s), %d new/updated",
+             len(all_rows), date_range, len(new_rows))
     return html
 
 def _update_purchased(html, data):
