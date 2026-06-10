@@ -1,49 +1,57 @@
 {
   "2026-06-09": {
     "cat door": {
-      "Meow Manor": 2,
-      "Purrfect Portal Beacon Hill Plastic": 16,
+      "Meow Manor": 20,
+      "Meow Manor XL": 2,
+      "Purrfect Portal Beacon Hill Plastic": 18,
       "Purrfect Portal Fairy Plastic": 15,
-      "Purrfect Portal French Plastic": 18,
-      "Purrfect Portal Gnome Plastic": 7
+      "Purrfect Portal French Plastic": 19,
+      "Purrfect Portal Gnome Plastic": 7,
+      "Purrfect Portal Wall Entry Meow Manor": 11
     },
     "cat door flap": {
-      "Meow Manor": 8,
-      "Purrfect Portal Fairy Plastic": 19,
-      "Purrfect Portal Gnome Plastic": 36
+      "Meow Manor XL": 9,
+      "Purrfect Portal Fairy Plastic": 22,
+      "Purrfect Portal Gnome Plastic": 1
     },
     "cat door for door": {
-      "Meow Manor": 4,
-      "Purrfect Portal Beacon Hill Plastic": 1,
-      "Purrfect Portal Fairy Plastic": 18,
-      "Purrfect Portal Gnome Plastic": 5
+      "Meow Manor XL": 3,
+      "Purrfect Portal Beacon Hill Plastic": 36,
+      "Purrfect Portal Fairy Plastic": 19,
+      "Purrfect Portal Gnome Plastic": 5,
+      "Purrfect Portal Wall Entry Meow Manor": 24
     },
     "cat door for interior door": {
-      "Meow Manor": 2,
-      "Purrfect Portal Beacon Hill Plastic": 11,
-      "Purrfect Portal Fairy Plastic": 6,
-      "Purrfect Portal French Plastic": 12,
-      "Purrfect Portal Gnome Plastic": 4
+      "Meow Manor XL": 2,
+      "Purrfect Portal Beacon Hill Plastic": 10,
+      "Purrfect Portal Fairy Plastic": 7,
+      "Purrfect Portal French Plastic": 13,
+      "Purrfect Portal Gnome Plastic": 4,
+      "Purrfect Portal Wall Entry Meow Manor": 12
     },
     "cat doors": {
-      "Meow Manor": 2,
-      "Purrfect Portal Beacon Hill Plastic": 16,
-      "Purrfect Portal Fairy Plastic": 15,
-      "Purrfect Portal French Plastic": 18,
-      "Purrfect Portal Gnome Plastic": 7
+      "Meow Manor": 20,
+      "Meow Manor XL": 2,
+      "Purrfect Portal Beacon Hill Plastic": 18,
+      "Purrfect Portal Fairy Plastic": 16,
+      "Purrfect Portal French Plastic": 19,
+      "Purrfect Portal Gnome Plastic": 7,
+      "Purrfect Portal Wall Entry Meow Manor": 12
     },
     "extra large cat door": {
-      "Meow Manor": 1,
-      "Purrfect Portal Beacon Hill Plastic": 12,
+      "Meow Manor XL": 1,
+      "Purrfect Portal Beacon Hill Plastic": 15,
       "Purrfect Portal Fairy Plastic": 22,
-      "Purrfect Portal Gnome Plastic": 11
+      "Purrfect Portal Gnome Plastic": 12,
+      "Purrfect Portal Wall Entry Meow Manor": 7
     },
     "interior cat door": {
-      "Meow Manor": 2,
+      "Meow Manor XL": 2,
       "Purrfect Portal Beacon Hill Plastic": 9,
       "Purrfect Portal Fairy Plastic": 5,
-      "Purrfect Portal French Plastic": 20,
-      "Purrfect Portal Gnome Plastic": 4
+      "Purrfect Portal French Plastic": 21,
+      "Purrfect Portal Gnome Plastic": 4,
+      "Purrfect Portal Wall Entry Meow Manor": 7
     }
   }
 }
