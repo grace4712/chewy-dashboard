@@ -1003,7 +1003,7 @@ function initAds(){
   new Chart(document.getElementById('ad-daily').getContext('2d'),{type:'bar',
     data:{labels:dd.map(d=>d.d),datasets:[
       {label:'Sales ($)',data:dd.map(d=>d.sa),backgroundColor:'rgba(108,99,255,0.65)',yAxisID:'y',order:2},
-      {label:'Spend ($)',data:dd.map(d=>d.sp),backgroundColor:'rgba(59,130,246,0.5)',yAxisID:'y',order:3},
+      {label:'Spend ($)',data:dd.map(d=>d.sp),backgroundColor:'rgba(239,68,68,0.6)',yAxisID:'y',order:3},
       {label:'ROAS',data:dd.map(d=>d.r),type:'line',borderColor:'#22c55e',backgroundColor:'rgba(34,197,94,0.08)',pointRadius:2,borderWidth:2,yAxisID:'y2',order:1,tension:0.3},
       {label:'Units',data:dd.map(d=>d.u),type:'line',borderColor:'#f59e0b',backgroundColor:'rgba(245,158,11,0.0)',pointRadius:3,pointBackgroundColor:'#f59e0b',borderWidth:2,borderDash:[4,3],yAxisID:'y3',order:0,tension:0.2}
     ]},
