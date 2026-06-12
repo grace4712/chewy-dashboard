@@ -468,7 +468,107 @@ def _update_campaigns(html, data):
         if new_html != html:
             html = new_html
 
+    # ── Rebuild Campaign Status table ─────────────────────────────────────────
+    html = _update_campaign_status_table(html, rows)
     return html
+
+
+# Static notes for paused campaigns — updated manually when strategy changes
+_PAUSED_NOTES = {
+    "FRD": ("Manually paused — low Fairy White/Blue inventory · split White/Blue before reactivating",
+            '<span class="pill pill-red">⛔ Wait for restock</span>'),
+    "GD":  ("Inventory unknown for 1381262",
+            '<span class="pill pill-yellow">Verify stock first</span>'),
+    "FD":  ("All 3 French Door SKUs OOS",
+            '<span class="pill pill-red">Activate after restock</span>'),
+}
+
+# Canonical order for the table
+_CAMPAIGN_ORDER = ["MMXL", "Meow Manor", "FRD", "GD", "FD"]
+
+
+def _update_campaign_status_table(html: str, rows: list) -> str:
+    """Rebuild the <!-- CAMPAIGN-STATUS-START/END --> tbody from live campaign data."""
+    from datetime import datetime as _dt
+
+    # Aggregate all sub-campaigns per canonical name
+    by_name: dict = {}
+    for r in rows:
+        n = r["name"]
+        if n not in by_name:
+            by_name[n] = {"spend": 0.0, "sales": 0.0, "budget": 0.0,
+                          "clicks": 0, "position_sum": 0.0, "status": r["status"]}
+        by_name[n]["spend"]        += r["spend"]
+        by_name[n]["sales"]        += r["sales"]
+        by_name[n]["budget"]       += r["budget"]
+        by_name[n]["clicks"]       += r["clicks"]
+        by_name[n]["position_sum"] += r["position"] * r["clicks"]
+        # Mark active if ANY sub-campaign is active
+        if r["status"].upper() == "ACTIVE":
+            by_name[n]["status"] = "ACTIVE"
+    # Compute derived fields
+    for n, v in by_name.items():
+        v["roas"]     = round(v["sales"] / v["spend"], 2) if v["spend"] else 0.0
+        v["position"] = round(v["position_sum"] / v["clicks"], 1) if v["clicks"] else 0.0
+
+    def _next_action(r):
+        roas = r["roas"]
+        if roas >= 8:
+            return '<span class="pill pill-green">Scale budget</span>'
+        if roas >= 5:
+            return '<span class="pill pill-green">Raise boost on top keywords</span>'
+        if roas >= 3:
+            return '<span class="pill pill-yellow">Monitor</span>'
+        if r["sales"] == 0:
+            return '<span class="pill pill-yellow">Give it 2–3 more weeks</span>'
+        return '<span class="pill pill-red">Review keywords — low ROAS</span>'
+
+    tbody_rows = []
+    for name in _CAMPAIGN_ORDER:
+        r = by_name.get(name)
+        is_active = r and r["status"].upper() == "ACTIVE"
+
+        if is_active:
+            roas_str = f"{r['roas']}x" if r["roas"] else "0x"
+            pos_str  = f"pos {r['position']:.1f} · " if r["position"] else ""
+            budget   = f"${r['budget']:.0f}" if r["budget"] else "—"
+            notes    = f"{budget} budget · {roas_str} ROAS · {pos_str}30d data"
+            action   = _next_action(r)
+            bg       = "background:rgba(34,197,94,.06);"
+            status   = '<span class="pill pill-green">✅ Active</span>'
+        else:
+            static   = _PAUSED_NOTES.get(name, ("—", '<span class="pill pill-yellow">Check status</span>'))
+            roas_part = f" · was {r['roas']}x ROAS" if r and r["roas"] else ""
+            notes    = static[0] + roas_part
+            action   = static[1]
+            bg       = "background:rgba(245,158,11,.04);" if name != "FD" else ""
+            status   = '<span class="pill pill-red">⛔ Paused</span>' if name == "FD" else '<span class="pill pill-yellow">⏸ Paused</span>'
+
+        tbody_rows.append(
+            f'        <tr style="{bg}"><td style="font-weight:600;">{name}</td>'
+            f'<td>{status}</td><td>{notes}</td><td>{action}</td></tr>'
+        )
+
+    month_label = _dt.now().strftime("%b %Y")
+    tbody_html  = "\n".join(tbody_rows)
+    block       = f"\n      <tbody>\n{tbody_html}\n      </tbody>\n      "
+
+    placeholder = "___CS_PLACEHOLDER___"
+    new_html = re.sub(
+        r'<!-- CAMPAIGN-STATUS-START -->.*?<!-- CAMPAIGN-STATUS-END -->',
+        '<!-- CAMPAIGN-STATUS-START -->' + placeholder + '<!-- CAMPAIGN-STATUS-END -->',
+        html, flags=re.DOTALL, count=1
+    )
+    if placeholder in new_html:
+        html = new_html.replace(placeholder, block, 1)
+        # Update the month in the heading
+        html = re.sub(r'Campaign Status — \w+ \d{4}',
+                      f'Campaign Status — {month_label}', html, count=1)
+        log.info("Campaign status table updated (%d campaigns)", len(tbody_rows))
+    else:
+        log.warning("CAMPAIGN-STATUS-START/END sentinels not found")
+    return html
+
 
 def _update_keywords(html, data):
     """Rebuild the full keyword table, action summary bar, callout panel, and date label."""
