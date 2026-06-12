@@ -854,7 +854,7 @@ def _update_historical_chart(html, history: dict) -> str:
         return "[" + ", ".join(parts) + "]"
 
     def _js_str(lst):
-        return "[" + ", ".join(f"'{v}'" for v in lst) + "]"
+        return "[" + ", ".join(f'"{v}"' for v in lst) + "]"
 
     block = (
         f"  // HIST-START\n"
