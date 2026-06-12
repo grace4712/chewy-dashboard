@@ -386,6 +386,7 @@ PARSERS = {
     "purchased":       parse_purchased,
 }
 
+
 # ── Dashboard HTML updater ─────────────────────────────────────────────────
 def update_dashboard(data: dict):
     """Patch index.html with the latest report data and update the header date."""
@@ -731,6 +732,9 @@ def _update_daily_chart(html, data):
         history[r["date"]] = {"sp": r["spend"], "sa": r["sales"], "r": r["roas"], "u": r["units"]}
     _save_daily_history(history)
 
+    # ── Update historical monthly chart ───────────────────────────────────────
+    html = _update_historical_chart(html, history)
+
     # ── Build sorted full-history rows ────────────────────────────────────────
     all_rows = sorted(history.items())   # [(iso_date, {...}), ...]
 
@@ -776,6 +780,104 @@ def _update_daily_chart(html, data):
     log.info("Daily chart updated: %d days total (%s), %d new/updated",
              len(all_rows), date_range, len(new_rows))
     return html
+
+def _update_historical_chart(html, history: dict) -> str:
+    """Roll up daily_history.json into monthly totals and rebuild the HIST-START/END block."""
+    from datetime import datetime as _dt
+
+    # Hardcoded pre-tracking months (Aug–Nov 2025) — no source CSV available
+    SEED = [
+        ("Aug '25", "2025-08", 527.76,  5501.43),
+        ("Sep '25", "2025-09", 551.67,  5644.41),
+        ("Oct '25", "2025-10", 607.38,  5631.33),
+        ("Nov '25", "2025-11", 1024.04, 7291.28),
+    ]
+    SEED_MONTHS = {s[1] for s in SEED}
+
+    # Roll up daily history by month
+    monthly: dict = {}
+    for iso, v in history.items():
+        ym = iso[:7]  # "2026-04"
+        if ym in SEED_MONTHS:
+            continue
+        if ym not in monthly:
+            monthly[ym] = {"sp": 0.0, "sa": 0.0}
+        monthly[ym]["sp"] += v["sp"]
+        monthly[ym]["sa"] += v["sa"]
+
+    # Build contiguous month list from Dec 2025 to latest month in history
+    latest_ym = max(monthly.keys()) if monthly else "2026-06"
+    start = _dt(2025, 12, 1)
+    end   = _dt(int(latest_ym[:4]), int(latest_ym[5:7]), 1)
+    gap_months = []
+    cur = start
+    while cur <= end:
+        gap_months.append(cur.strftime("%Y-%m"))
+        if cur.month == 12:
+            cur = _dt(cur.year + 1, 1, 1)
+        else:
+            cur = _dt(cur.year, cur.month + 1, 1)
+
+    def _label(ym: str) -> str:
+        dt = _dt(int(ym[:4]), int(ym[5:7]), 1)
+        yr = "'" + ym[2:4]
+        return f"{dt.strftime('%b')} {yr}"
+
+    labels, spends, sales, roas_vals = [], [], [], []
+
+    # Seed months first
+    for lbl, ym, sp, sa in SEED:
+        labels.append(lbl)
+        spends.append(sp)
+        sales.append(sa)
+        roas_vals.append(round(sa / sp, 2) if sp else None)
+
+    # Gap / dynamic months
+    for ym in gap_months:
+        labels.append(_label(ym))
+        if ym in monthly:
+            sp = round(monthly[ym]["sp"], 2)
+            sa = round(monthly[ym]["sa"], 2)
+            r  = round(sa / sp, 2) if sp else None
+            spends.append(sp)
+            sales.append(sa)
+            roas_vals.append(r)
+        else:
+            spends.append(None)
+            sales.append(None)
+            roas_vals.append(None)
+
+    def _js(lst):
+        parts = []
+        for v in lst:
+            parts.append("null" if v is None else str(v))
+        return "[" + ", ".join(parts) + "]"
+
+    def _js_str(lst):
+        return "[" + ", ".join(f"'{v}'" for v in lst) + "]"
+
+    block = (
+        f"  // HIST-START\n"
+        f"  const hLabels = {_js_str(labels)};\n"
+        f"  const hSpend  = {_js(spends)};\n"
+        f"  const hSales  = {_js(sales)};\n"
+        f"  const hRoas   = {_js(roas_vals)};\n"
+        f"  // HIST-END"
+    )
+
+    placeholder = "___HIST_PLACEHOLDER___"
+    new_html = re.sub(
+        r'// HIST-START.*?// HIST-END',
+        placeholder,
+        html, flags=re.DOTALL, count=1
+    )
+    if placeholder in new_html:
+        html = new_html.replace(placeholder, block, 1)
+        log.info("Historical chart updated: %d months", len(labels))
+    else:
+        log.warning("HIST-START/END sentinels not found — historical chart not updated")
+    return html
+
 
 def _update_purchased(html, data):
     """Update the halo / cross-sell table with purchased products data."""
@@ -851,10 +953,10 @@ def process_file(path: Path):
         log.debug("Already processed: %s", path.name)
         return
 
-    log.info("New Chewy report detected: %s", path.name)
-
     # Wait briefly for file to finish writing
     time.sleep(2)
+
+    log.info("New Chewy report detected: %s", path.name)
 
     rtype = detect_report_type(path)
     parser = PARSERS.get(rtype)
