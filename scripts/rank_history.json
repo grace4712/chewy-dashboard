@@ -108,5 +108,39 @@
       "Purrfect Portal French Plastic": 21,
       "Wall Entry Meow Manor": 7
     }
+  },
+  "2026-06-12": {
+    "cat door": {},
+    "cat door flap": {
+      "Fairy Door": 16,
+      "Gnome Door": 34,
+      "Meow Manor XL": 9
+    },
+    "cat door for door": {
+      "Beacon Hill": 34,
+      "Fairy Door": 17,
+      "Gnome Door": 4,
+      "Meow Manor XL": 2,
+      "Wall Entry Meow Manor": 24
+    },
+    "cat door for interior door": {},
+    "cat doors": {
+      "Beacon Hill": 23,
+      "Fairy Door": 19,
+      "Gnome Door": 8,
+      "Meow Manor": 16,
+      "Meow Manor XL": 1,
+      "Purrfect Portal French Plastic": 20,
+      "Wall Entry Meow Manor": 12
+    },
+    "extra large cat door": {},
+    "interior cat door": {
+      "Beacon Hill": 8,
+      "Fairy Door": 4,
+      "Gnome Door": 3,
+      "Meow Manor XL": 1,
+      "Purrfect Portal French Plastic": 23,
+      "Wall Entry Meow Manor": 7
+    }
   }
 }
