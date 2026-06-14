@@ -169,6 +169,39 @@ def _human_dwell(page, lo: float, hi: float):
         pass
     time.sleep(random.uniform(lo, hi))
 
+# ── Kasada challenge handling ──────────────────────────────────────────────
+def clear_kasada_challenge(page, url: str, label: str = "page", max_cycles: int = 4) -> bool:
+    """
+    Navigate to `url` and clear Kasada's JS challenge if served.
+
+    Kasada returns HTTP 429 + a JavaScript proof-of-work on the first request of a
+    fresh session. A real browser runs that JS, gets a clearance cookie, and the
+    next load returns 200. We replicate that: on 429 we let the challenge JS run
+    for a bit, then reload — up to `max_cycles` times. Returns True once we see a
+    200 (cleared), False if 429 persists (genuine block).
+    """
+    for cycle in range(max_cycles):
+        try:
+            resp = (page.goto(url, wait_until="domcontentloaded", timeout=30000)
+                    if cycle == 0 else
+                    page.reload(wait_until="domcontentloaded", timeout=30000))
+            status = resp.status if resp else None
+        except Exception as e:
+            log.warning("  %s nav attempt %d errored: %s", label, cycle + 1, e)
+            status = None
+
+        log.info("  %s attempt %d: HTTP %s", label, cycle + 1, status)
+
+        if status == 200:
+            return True
+
+        # 429 or transient error → let Kasada's challenge JS execute, then reload.
+        solve_wait = random.uniform(9, 15)
+        log.info("    challenge served — letting it solve (%ds)...", int(solve_wait))
+        time.sleep(solve_wait)
+
+    return False
+
 # ── Fetch one search results page via Playwright CDP ──────────────────────
 def fetch_search_page_cdp(page, keyword: str, pagenum: int) -> str | None:
     """Navigate the CDP page to Chewy search and return HTML, or None on failure."""
@@ -183,11 +216,15 @@ def fetch_search_page_cdp(page, keyword: str, pagenum: int) -> str | None:
 
             status = response.status
             if status == 429:
-                # Gentle, jittered backoff. If it persists past our attempts we give
-                # up on this page rather than hammering (which deepens the throttle).
-                wait = _jitter(45 * (attempt + 1))
-                log.warning("429 rate limit on '%s' page %d — waiting %ds", keyword, pagenum, int(wait))
-                time.sleep(wait)
+                # A 429 mid-session means Kasada re-challenged us. Let the challenge
+                # JS solve in place and reload, same as the warm-up — don't just wait
+                # and re-navigate (which keeps fetching fresh challenges).
+                log.warning("429 on '%s' page %d — re-solving challenge in place", keyword, pagenum)
+                if clear_kasada_challenge(page, url, label=f"'{keyword}' p{pagenum}", max_cycles=3):
+                    html = page.content()
+                    if len(html) > 5000:
+                        return html
+                time.sleep(_jitter(20))
                 continue
 
             if status != 200:
@@ -505,22 +542,18 @@ def main():
 
         page = context.new_page()
 
-        # Warm up — visit Chewy homepage so cookies/session are established
-        log.info("Warming up on Chewy homepage...")
-        warm_status = None
-        try:
-            resp = page.goto("https://www.chewy.com/", wait_until="domcontentloaded", timeout=20000)
-            warm_status = resp.status if resp else None
-            log.info("Homepage: HTTP %s", warm_status)
-        except Exception as e:
-            log.warning("Homepage warm-up failed: %s", e)
+        # Warm up — Kasada serves a "429 + JS challenge" on first contact with a
+        # fresh session. The browser must EXECUTE the challenge JS (a proof-of-work),
+        # receive its clearance cookie, then a reload succeeds. So a first-hit 429 is
+        # expected: we give the challenge time to solve and reload, rather than
+        # aborting. Only a 429 that survives several solve-and-reload cycles is a real
+        # block.
+        log.info("Warming up on Chewy homepage (solving Kasada challenge if served)...")
+        warm_ok = clear_kasada_challenge(page, "https://www.chewy.com/", label="homepage")
 
-        # If we're already being rate-limited on the homepage, the profile/IP is
-        # flagged. Hammering searches now only deepens the throttle — back off and
-        # let the next scheduled run try with a cooled-down session.
-        if warm_status == 429:
-            log.error("Homepage returned 429 — session is rate-limited. Aborting this run "
-                      "cleanly so we don't deepen the throttle. Will retry next schedule.")
+        if not warm_ok:
+            log.error("Could not clear Kasada challenge on homepage after retries — "
+                      "treating as a hard block. Aborting cleanly; will retry next schedule.")
             page.close()
             browser.close()
             if we_opened_chrome and chrome_proc:
