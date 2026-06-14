@@ -497,6 +497,10 @@ def _update_campaigns(html, data):
 
     # ── Rebuild Campaign Status table ─────────────────────────────────────────
     html = _update_campaign_status_table(html, rows)
+
+    # ── Rebuild Weekly Budget Decision panel (live status/budget cells) ───────
+    report_date_iso = m.group(2) if m else None
+    html = _update_budget_panel(html, rows, report_date_iso)
     return html
 
 
@@ -594,6 +598,113 @@ def _update_campaign_status_table(html: str, rows: list) -> str:
         log.info("Campaign status table updated (%d campaigns)", len(tbody_rows))
     else:
         log.warning("CAMPAIGN-STATUS-START/END sentinels not found")
+    return html
+
+
+# ── Weekly Budget Decision panel ────────────────────────────────────────────
+# Live cells (Status, Current Budget, header total, freshness date) come from the
+# daily report. The other columns — products, inventory gate, recommended budget,
+# priority action — are curated strategy and live here in config. The Inventory
+# Gate column stays manual until the inventory/CPFR feed lands (task t1).
+# Each row: (label, canon, products, budget_mode, inv_pill, rec_text, action_pill)
+#   budget_mode: "live" → show canonical current budget; any other string is shown literally.
+_BUDGET_PANEL = [
+    ("FRD — Fairy White", "FRD", "SKU 1381150 · $34.95", "live",
+     ("pill-red", "⛔ Low inventory"), "$250/mo when restocked",
+     ("pill-red", "Wait for restock → split → reactivate")),
+    ("FRD — Fairy Blue", "FRD", "SKU 1381166 · $29.95", "Shared w/ White",
+     ("pill-red", "⛔ Low inventory"), "$50/mo when restocked",
+     ("pill-yellow", 'Split campaign, pause "cat door" kw when reactivating')),
+    ("MMXL — Meow Manor XL", "MMXL", "XL White 167 OH · XL Brown 102 OH", "live",
+     ("pill-green", "✓ Healthy (167 + 102 OH)"), "Scale with ROAS",
+     ("pill-green", "✅ Live — monitor ROAS")),
+    ("GD — Gnome Door", "GD", "SKU 1381262 (Blue/Green active · Black discontinued)", "live",
+     ("pill-yellow", "⚠️ Inventory unknown"), "$50/mo (test)",
+     ("pill-yellow", "Verify stock first, then test")),
+    ("MM — White — general bucket", "Meow Manor", "Lg variants — Black has shortfall", "live",
+     ("pill-red", "⚠️ Black: 19 OH shortfall"), "Watch closely",
+     ("pill-yellow", "Monitor; restock Black asap")),
+    ("FD — French Door", "FD", "SKUs 1381182, 1381198, 1381190", "live",
+     ("pill-red", "⛔ All 3 SKUs OOS"), "$0 — hold",
+     ("pill-red", "Activate only after restock")),
+]
+
+
+def _canon_status_budget(rows: list) -> dict:
+    """Aggregate live status + current budget per canonical campaign name."""
+    agg: dict = {}
+    for r in rows:
+        n = r["name"]
+        a = agg.setdefault(n, {"budget": 0.0, "active": False})
+        a["budget"] += r["budget"]
+        if r["status"].upper() == "ACTIVE":
+            a["active"] = True
+    return agg
+
+
+def _update_budget_panel(html: str, rows: list, report_date_iso: str | None) -> str:
+    """Rebuild the <!-- BUDGET-PANEL-START/END --> tbody + header total + freshness date."""
+    from datetime import datetime as _dt
+    agg = _canon_status_budget(rows)
+
+    tbody = []
+    for label, canon, products, budget_mode, inv, rec, action in _BUDGET_PANEL:
+        a = agg.get(canon, {"budget": 0.0, "active": False})
+        active = a["active"]
+        if budget_mode == "live":
+            budget_disp = f"${a['budget']:.0f}/mo" + ("" if active else " (paused)")
+            budget_cell = budget_disp
+        else:
+            budget_cell = f'<span style="color:var(--muted);">{budget_mode}</span>'
+
+        if active:
+            status_pill = '<span class="pill pill-green">✅ Active</span>'
+            row_style = "background:rgba(34,197,94,.06);"
+        else:
+            status_pill = '<span class="pill pill-yellow">⏸ Paused</span>'
+            row_style = "opacity:0.6;"
+
+        tbody.append(
+            f'        <tr style="{row_style}">'
+            f'<td style="font-weight:600;">{label}</td>'
+            f'<td style="font-size:11px;color:var(--muted);">{products}</td>'
+            f'<td>{budget_cell}</td>'
+            f'<td>{status_pill}</td>'
+            f'<td><span class="pill {inv[0]}">{inv[1]}</span></td>'
+            f'<td style="font-weight:700;color:var(--muted);">{rec}</td>'
+            f'<td><span class="pill {action[0]}">{action[1]}</span></td></tr>'
+        )
+
+    block = "\n      <tbody>\n" + "\n".join(tbody) + "\n      </tbody>\n      "
+    placeholder = "___BP_PLACEHOLDER___"
+    new_html = re.sub(
+        r'<!-- BUDGET-PANEL-START -->.*?<!-- BUDGET-PANEL-END -->',
+        '<!-- BUDGET-PANEL-START -->' + placeholder + '<!-- BUDGET-PANEL-END -->',
+        html, flags=re.DOTALL, count=1
+    )
+    if placeholder not in new_html:
+        log.warning("BUDGET-PANEL-START/END sentinels not found")
+        return html
+    html = new_html.replace(placeholder, block, 1)
+
+    # Header: current active monthly budget (sum of active canonical budgets)
+    active_total = sum(a["budget"] for a in agg.values() if a["active"])
+    html = re.sub(r'(<span id="budget-active-total">)\$[\d,]+(</span>)',
+                  rf'\g<1>${active_total:,.0f}\g<2>', html, count=1)
+
+    # Freshness stamp: update data-updated + the trailing "updated <date>" text
+    if report_date_iso:
+        try:
+            d = _dt.strptime(report_date_iso, "%Y-%m-%d")
+            disp = d.strftime("%b %d, %Y").replace(" 0", " ")
+        except ValueError:
+            disp = report_date_iso
+        html = re.sub(r'(id="budget-stamp"[^>]*data-updated=")[\d-]+(")',
+                      rf'\g<1>{report_date_iso}\g<2>', html, count=1)
+        html = re.sub(r'(id="budget-stamp".*?updated )[A-Za-z]{3} \d{1,2}, \d{4}',
+                      rf'\g<1>{disp}', html, count=1, flags=re.DOTALL)
+
+    log.info("Budget panel updated (active monthly budget $%.0f)", active_total)
     return html
 
 
