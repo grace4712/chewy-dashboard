@@ -429,7 +429,7 @@ def update_rank_section(history: dict):
     <div class="card">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:8px;">
         <h3 style="margin:0;">🔍 Organic Search Rank — Chewy</h3>
-        <span style="font-size:11px;color:var(--muted);">Updated {ts} · top {PAGES_TO_SCAN * 20} results · {len(KEYWORDS)} keywords</span>
+        <span style="font-size:11px;color:var(--muted);" data-updated="{today_iso}" data-stale-after="1">Updated {ts} · top {PAGES_TO_SCAN * 20} results · {len(KEYWORDS)} keywords</span>
       </div>
       <div style="font-size:11px;color:var(--muted);margin-bottom:10px;">
         Rank of each Purrfect Portal product in Chewy organic search. Lower # = better.

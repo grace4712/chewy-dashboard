@@ -247,7 +247,7 @@ tr:hover td { background: rgba(255,255,255,.02); }
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
       <div>
         <div style="font-size:11px;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:.6px;margin-bottom:3px;">💰 This Week's Budget Recommendation</div>
-        <div style="font-size:12px;color:var(--muted);">Based on current inventory, ROAS data, and campaign status — updated Jun 4, 2026</div>
+        <div style="font-size:12px;color:var(--muted);" data-updated="2026-06-04" data-stale-after="7">Based on current inventory, ROAS data, and campaign status — updated Jun 4, 2026</div>
       </div>
       <div style="text-align:right;">
         <div style="font-size:11px;color:var(--muted);margin-bottom:2px;">Current active spend</div>
@@ -450,7 +450,7 @@ tr:hover td { background: rgba(255,255,255,.02); }
   <!-- KEYWORD PERFORMANCE -->
   <div class="card">
     <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:12px;">
-      <h3 style="margin:0;">🔑 Keyword Performance — All Campaigns <span id="kw-date" style="font-size:11px;font-weight:400;color:var(--muted);">May 15, 2026 – Jun 13, 2026</span></h3>
+      <h3 style="margin:0;">🔑 Keyword Performance — All Campaigns <span id="kw-date" style="font-size:11px;font-weight:400;color:var(--muted);" data-updated="2026-06-13" data-stale-after="2">May 15, 2026 – Jun 13, 2026</span></h3>
       <div style="display:flex;gap:8px;flex-wrap:wrap;" id="kw-action-summary"><span style="background:rgba(34,197,94,.1);border:1px solid rgba(34,197,94,.3);border-radius:6px;padding:3px 10px;font-size:11px;color:var(--green);font-weight:600;">↑ Raise boost: 10</span><span style="background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.3);border-radius:6px;padding:3px 10px;font-size:11px;color:#f87171;font-weight:600;">⛔ Negate: 25</span><span style="background:rgba(245,158,11,.1);border:1px solid rgba(245,158,11,.3);border-radius:6px;padding:3px 10px;font-size:11px;color:var(--yellow);font-weight:600;">👁 Monitor: 76</span></div>
     </div>
     <div style="overflow-x:auto;">
@@ -606,7 +606,7 @@ tr:hover td { background: rgba(255,255,255,.02); }
     <div class="card">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:8px;">
         <h3 style="margin:0;">🔍 Organic Search Rank — Chewy</h3>
-        <span style="font-size:11px;color:var(--muted);">Updated Jun 12, 2026 · top 60 results · 7 keywords</span>
+        <span style="font-size:11px;color:var(--muted);" data-updated="2026-06-12" data-stale-after="1">Updated Jun 12, 2026 · top 60 results · 7 keywords</span>
       </div>
       <div style="font-size:11px;color:var(--muted);margin-bottom:10px;">
         Rank of each Purrfect Portal product in Chewy organic search. Lower # = better.
@@ -1224,7 +1224,36 @@ function updatePO(){
   document.getElementById('po-results').innerHTML=html;
 }
 // Auto-run PO tool on load so pre-populated values show results immediately
-document.addEventListener('DOMContentLoaded',()=>{ updatePO(); initTasks(); });
+document.addEventListener('DOMContentLoaded',()=>{ updatePO(); initTasks(); renderFreshness(); });
+
+// ── Data Freshness Indicators ──────────────────────────────────────────────
+// Any element tagged data-updated="YYYY-MM-DD" (optionally data-stale-after="N"
+// days, default 1) gets a live badge computed at page-load. A feed that dies
+// silently keeps its old date, so the badge auto-degrades green→amber→red and
+// makes the staleness visible instead of showing old data as if it were current.
+function renderFreshness(){
+  const today = new Date(); today.setHours(0,0,0,0);
+  const MS = 86400000;
+  document.querySelectorAll('[data-updated]').forEach(el=>{
+    const raw = el.getAttribute('data-updated');
+    const d = new Date(raw + 'T00:00:00');
+    if(isNaN(d.getTime())) return;
+    const days = Math.round((today - d)/MS);
+    const staleAfter = parseInt(el.getAttribute('data-stale-after')||'1',10);
+    let color, label, icon;
+    if(days<=0){ color='#22c55e'; label='live'; icon='●'; }
+    else if(days<=staleAfter){ color='#22c55e'; label=days+'d ago'; icon='●'; }
+    else if(days<=staleAfter*2){ color='#f59e0b'; label=days+'d ago'; icon='⚠'; }
+    else { color='#ef4444'; label='stale · '+days+'d old'; icon='⚠'; }
+    let badge = el.querySelector(':scope > .fresh-badge');
+    if(!badge){ badge=document.createElement('span'); badge.className='fresh-badge'; el.appendChild(badge); }
+    badge.style.cssText='margin-left:6px;padding:1px 6px;border-radius:6px;font-size:10px;'
+      +'font-weight:700;white-space:nowrap;color:'+color+';border:1px solid '+color+'40;'
+      +'background:'+color+'1a;';
+    badge.title='Data last updated '+raw;
+    badge.textContent=icon+' '+label;
+  });
+}
 
 // ── Tasks ──
 const TASK_KEY = 'pp_tasks_v3';
