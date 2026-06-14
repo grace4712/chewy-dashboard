@@ -468,6 +468,33 @@ def _update_campaigns(html, data):
         if new_html != html:
             html = new_html
 
+    # ── Update campaign subtitle date range from filename ─────────────────────
+    src = data.get("source", "")
+    m = re.search(r'(\d{4}-\d{2}-\d{2})_to_(\d{4}-\d{2}-\d{2})', src)
+    if m:
+        def _fmt(d):
+            from datetime import datetime
+            return datetime.strptime(d, "%Y-%m-%d").strftime("%b %-d, %Y") if hasattr(datetime, 'strptime') else d
+        try:
+            from datetime import datetime
+            def _fmt_day(d, include_year=False):
+                dt = datetime.strptime(d, "%Y-%m-%d")
+                s = dt.strftime("%b %d, %Y") if include_year else dt.strftime("%b %d")
+                return s.replace(" 0", " ")  # strip leading zero cross-platform
+            d1 = _fmt_day(m.group(1))
+            d2 = _fmt_day(m.group(2), include_year=True)
+        except ValueError:
+            d1, d2 = m.group(1), m.group(2)
+        active_names = " + ".join(r["name"] for r in active)
+        paused_names = [r["name"] for r in rows if r["status"].upper() != "ACTIVE"]
+        paused_str   = " · " + ", ".join(paused_names) + " paused" if paused_names else ""
+        subtitle = f"Active Campaigns — {active_names} ({d1} – {d2}){paused_str}"
+        html = re.sub(
+            r'<!-- CAMPAIGN-SUBTITLE-START -->.*?<!-- CAMPAIGN-SUBTITLE-END -->',
+            f'<!-- CAMPAIGN-SUBTITLE-START --><div class="sec">{subtitle}</div><!-- CAMPAIGN-SUBTITLE-END -->',
+            html, flags=re.DOTALL
+        )
+
     # ── Rebuild Campaign Status table ─────────────────────────────────────────
     html = _update_campaign_status_table(html, rows)
     return html
