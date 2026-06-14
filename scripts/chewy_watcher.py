@@ -424,6 +424,22 @@ def _roas_str(r):
     """ROAS is already normalised to a multiplier by the parsers — just round it."""
     return round(r, 2)
 
+def _collapse_canon(name: str) -> str:
+    """Collapse any sub-campaign name to one of the 5 display canonicals."""
+    n = name.lower()
+    if "mmxl" in n:
+        return "MMXL"
+    if "frd" in n or "fairy" in n:
+        return "FRD"
+    if n.startswith("fd") or "french" in n:
+        return "FD"
+    if n.startswith("gd") or "gnome" in n:
+        return "GD"
+    if "meow manor" in n or n.startswith("mm ") or n.startswith("mm-") or n.startswith("mmw"):
+        return "Meow Manor"
+    return name
+
+
 def _update_campaigns(html, data):
     rows = data["rows"]
     # Record latest display names for any row that carries a Campaign ID
@@ -448,11 +464,14 @@ def _update_campaigns(html, data):
     log.info("Campaigns: spend=$%.2f  sales=$%.2f  ROAS=%.2fx  position=%.1f",
              total_spend, total_sales, overall_roas, avg_position)
 
-    # Patch KPI values in the Active Campaign section
+    # Patch KPI values — scoped to the Ad Management block ONLY. These labels
+    # (ROAS, Avg Position) also appear in the Overview/P&L tabs, so a global
+    # count=1 replace would corrupt those and miss the intended block. We operate
+    # only on the substring between the CAMPAIGN-KPI sentinels.
     replacements = [
         (r'(<div class="label">Spend</div><div class="value[^"]*">)\$[\d,.]+',
          r'\g<1>$' + f"{total_spend:.2f}"),
-        (r'(<div class="label">Direct Sales</div><div class="value">)\$[\d,.]+',
+        (r'(<div class="label">Direct Sales</div><div class="value[^"]*">)\$[\d,.]+',
          r'\g<1>$' + f"{total_sales:,.2f}"),
         (r'(<div class="label">ROAS</div><div class="value[^"]*">)[\d.]+x',
          r'\g<1>' + f"{overall_roas}x"),
@@ -463,10 +482,14 @@ def _update_campaigns(html, data):
         (r'(<div class="label">New to Brand</div><div class="value[^"]*">)\d+\s*/\s*\d+',
          r'\g<1>' + f"{total_ntb} / {total_orders}"),
     ]
-    for pattern, repl in replacements:
-        new_html = re.sub(pattern, repl, html, count=1)
-        if new_html != html:
-            html = new_html
+    km = re.search(r'<!-- CAMPAIGN-KPI-START -->.*?<!-- CAMPAIGN-KPI-END -->', html, re.DOTALL)
+    if km:
+        block = km.group(0)
+        for pattern, repl in replacements:
+            block = re.sub(pattern, repl, block, count=1)
+        html = html[:km.start()] + block + html[km.end():]
+    else:
+        log.warning("CAMPAIGN-KPI sentinels not found — skipping KPI patch")
 
     # ── Update campaign subtitle date range from filename ─────────────────────
     src = data.get("source", "")
@@ -485,9 +508,13 @@ def _update_campaigns(html, data):
             d2 = _fmt_day(m.group(2), include_year=True)
         except ValueError:
             d1, d2 = m.group(1), m.group(2)
-        active_names = " + ".join(r["name"] for r in active)
-        paused_names = [r["name"] for r in rows if r["status"].upper() != "ACTIVE"]
-        paused_str   = " · " + ", ".join(paused_names) + " paused" if paused_names else ""
+        # Collapse sub-campaigns to display canonicals, dedupe, keep canonical order
+        order = ["MMXL", "Meow Manor", "FRD", "GD", "FD"]
+        active_canon = {_collapse_canon(r["name"]) for r in active}
+        paused_canon = {_collapse_canon(r["name"]) for r in rows} - active_canon
+        active_names = " + ".join(n for n in order if n in active_canon)
+        paused_list  = [n for n in order if n in paused_canon]
+        paused_str   = " · " + ", ".join(paused_list) + " paused" if paused_list else ""
         subtitle = f"Active Campaigns — {active_names} ({d1} – {d2}){paused_str}"
         html = re.sub(
             r'<!-- CAMPAIGN-SUBTITLE-START -->.*?<!-- CAMPAIGN-SUBTITLE-END -->',
@@ -783,7 +810,7 @@ def _update_keywords(html, data):
 
     def pos_cell(pos: float) -> str:
         if pos == 0:
-            return '—'
+            return '<td>—</td>'
         colour = 'var(--green)' if pos <= 8 else 'var(--yellow)'
         return f'<td style="color:{colour};">{pos:.1f}</td>'
 
