@@ -3,6 +3,9 @@
 # Runs once daily, searches Chewy for each target keyword,
 # records where each Purrfect Portal product appears in results.
 #
+# Uses real Chrome via CDP (remote debugging) to bypass Kasada bot protection.
+# Chrome is launched automatically if not already running with debug port.
+#
 # Output:  scripts/rank_history.json
 #          updates index.html with a rank table + trend sparklines
 #
@@ -13,18 +16,31 @@ import re
 import json
 import sys
 import time
+import random
 import logging
 import subprocess
+import socket
+import urllib.request
+import io
 from pathlib import Path
 from datetime import datetime, timedelta
 
-import curl_cffi.requests as httpx
+# Fix Windows console encoding for Unicode product names in log output
+if sys.stdout.encoding and sys.stdout.encoding.lower() not in ('utf-8', 'utf8'):
+    sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8', errors='replace')
+if sys.stderr.encoding and sys.stderr.encoding.lower() not in ('utf-8', 'utf8'):
+    sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding='utf-8', errors='replace')
 
 # ── Paths ──────────────────────────────────────────────────────────────────
 DASHBOARD_DIR    = Path(r"C:\Users\retai\OneDrive\Desktop\Claude Code")
 DASHBOARD_HTML   = DASHBOARD_DIR / "index.html"
 RANK_HISTORY     = DASHBOARD_DIR / "scripts" / "rank_history.json"
 LOG_FILE         = DASHBOARD_DIR / "scripts" / "rank_tracker.log"
+
+CHROME_EXE            = r"C:\Program Files\Google\Chrome\Application\chrome.exe"
+# Dedicated profile for rank tracker — never conflicts with your main Chrome session
+RANK_TRACKER_PROFILE  = r"C:\Users\retai\AppData\Local\Google\Chrome\RankTrackerProfile"
+DEBUG_PORT            = 9223   # use 9223 to avoid conflict with any other debug sessions
 
 # ── Logging ────────────────────────────────────────────────────────────────
 logging.basicConfig(
@@ -38,7 +54,6 @@ logging.basicConfig(
 log = logging.getLogger("rank_tracker")
 
 # ── Config: keywords + products to track ──────────────────────────────────
-# Keywords: what to search on Chewy
 KEYWORDS = [
     "cat door",
     "cat door for interior door",
@@ -49,26 +64,28 @@ KEYWORDS = [
     "cat door for door",
 ]
 
-# Product identifier: any Chewy URL containing this string = Purrfect Portal
 BRAND_SLUG = "purrfect-portal"
 
-# Specific products we want to track by URL slug keyword
-# Maps display name → slug fragment to look for in the URL
 PRODUCTS = {
-    "Meow Manor XL":      "meow-manor-extra-large",
-    "Meow Manor XL Alt":  "meow-manor-xl",
-    "Meow Manor":         "meow-manor",
-    "Fairy Door":         "fairy-door",
-    "French Door":        "french-door",
-    "Gnome Door":         "gnome-door",
+    "Meow Manor XL":       "meow-manor-plastic",         # /purrfect-portal-meow-manor-plastic/dp/...
+    "Meow Manor":          "meow-manor-interior",         # /purrfect-portal-meow-manor-interior/dp/...
+    "Wall Entry Meow Manor": "wall-entry-meow-manor",    # /purrfect-portal-wall-entry-meow-manor/dp/...
+    "Gnome Door":          "gnome-plastic",              # /purrfect-portal-gnome-plastic/dp/...
+    "Beacon Hill":         "beacon-hill-plastic",         # /purrfect-portal-beacon-hill-plastic/dp/...
+    "Fairy Door":          "fairy-plastic",               # /purrfect-portal-fairy-plastic/dp/...
 }
 
-# Pages to scan per keyword (20 results/page → 3 pages = top 60)
-PAGES_TO_SCAN = 3
+PAGES_TO_SCAN          = 3
+DELAY_BETWEEN_PAGES    = 8    # base seconds between page fetches (jitter added)
+DELAY_BETWEEN_KEYWORDS = 25   # base seconds between keywords (jitter added)
 
-# Delay between requests (seconds) — be polite to Chewy
-DELAY_BETWEEN_PAGES    = 5   # seconds between page fetches
-DELAY_BETWEEN_KEYWORDS = 20  # seconds between keywords
+# A current, real Chrome UA string — sterile automation UAs are an easy bot tell
+USER_AGENT = ("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
+              "(KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36")
+
+def _jitter(base: float, spread: float = 0.4) -> float:
+    """Return base seconds ± up to `spread` fraction, to avoid robotic fixed timing."""
+    return base * (1 + random.uniform(-spread, spread))
 
 # ── History helpers ────────────────────────────────────────────────────────
 def load_history() -> dict:
@@ -80,99 +97,194 @@ def load_history() -> dict:
 def save_history(h: dict):
     RANK_HISTORY.write_text(json.dumps(h, indent=2, sort_keys=True))
 
-# ── Fetch one search results page ─────────────────────────────────────────
-def fetch_search_page(session, keyword: str, page: int) -> str | None:
-    """Return HTML of the search results page, or None on failure."""
-    url = f"https://www.chewy.com/s?query={keyword.replace(' ', '+')}&page={page}"
-    headers = {
-        "Accept":          "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
-        "Accept-Language": "en-US,en;q=0.9",
-        "Referer":         "https://www.chewy.com/",
-        "Cache-Control":   "no-cache",
-    }
+# ── Chrome CDP helpers ─────────────────────────────────────────────────────
+def _is_port_open(port: int) -> bool:
+    try:
+        with socket.create_connection(("127.0.0.1", port), timeout=2):
+            return True
+    except OSError:
+        return False
+
+def _is_chrome_cdp_ready() -> bool:
+    """Check if Chrome's CDP endpoint is responding."""
+    if not _is_port_open(DEBUG_PORT):
+        return False
+    try:
+        with urllib.request.urlopen(f"http://localhost:{DEBUG_PORT}/json/version", timeout=3) as r:
+            return r.status == 200
+    except Exception:
+        return False
+
+def ensure_chrome_running() -> subprocess.Popen | None:
+    """
+    Make sure Chrome is running with CDP on DEBUG_PORT.
+    Returns a Popen handle if WE started Chrome (caller must kill it), else None.
+    """
+    if _is_chrome_cdp_ready():
+        log.info("Chrome already running with CDP on port %d", DEBUG_PORT)
+        return None
+
+    log.info("Starting Chrome with --remote-debugging-port=%d ...", DEBUG_PORT)
+    # Use a dedicated profile so we never conflict with the user's running Chrome
+    import os
+    os.makedirs(RANK_TRACKER_PROFILE, exist_ok=True)
+    proc = subprocess.Popen([
+        CHROME_EXE,
+        f"--remote-debugging-port={DEBUG_PORT}",
+        "--remote-allow-origins=*",
+        f"--user-data-dir={RANK_TRACKER_PROFILE}",
+        "--no-first-run",
+        "--no-default-browser-check",
+        # Anti-detection: hide the automation fingerprint Kasada looks for.
+        # (Dropped --no-sandbox / --disable-extensions — both are bot tells.)
+        "--disable-blink-features=AutomationControlled",
+        "--exclude-switches=enable-automation",
+        "--disable-features=IsolateOrigins,site-per-process",
+        f"--user-agent={USER_AGENT}",
+        "--window-size=1280,900",
+        "about:blank",
+    ])
+
+    # Wait up to 30s for CDP to become ready
+    for i in range(30):
+        time.sleep(1)
+        if _is_chrome_cdp_ready():
+            log.info("Chrome CDP ready after %ds", i + 1)
+            return proc
+        log.debug("Waiting for Chrome CDP... (%d/30)", i + 1)
+
+    log.error("Chrome CDP not ready after 30s — aborting")
+    proc.terminate()
+    return None
+
+# ── Human-like behavior ────────────────────────────────────────────────────
+def _human_dwell(page, lo: float, hi: float):
+    """Pause for a human-ish interval and scroll the page a little."""
+    try:
+        steps = random.randint(2, 4)
+        for _ in range(steps):
+            page.mouse.wheel(0, random.randint(300, 700))
+            time.sleep(random.uniform(0.4, 1.1))
+    except Exception:
+        pass
+    time.sleep(random.uniform(lo, hi))
+
+# ── Fetch one search results page via Playwright CDP ──────────────────────
+def fetch_search_page_cdp(page, keyword: str, pagenum: int) -> str | None:
+    """Navigate the CDP page to Chewy search and return HTML, or None on failure."""
+    url = f"https://www.chewy.com/s?query={keyword.replace(' ', '+')}&page={pagenum}"
     for attempt in range(3):
         try:
-            resp = session.get(url, headers=headers, timeout=30)
-            if resp.status_code == 200 and len(resp.text) > 10000:
-                return resp.text
-            elif resp.status_code == 429:
-                wait = 60 * (attempt + 1)
-                log.warning("429 rate limit on '%s' page %d — waiting %ds", keyword, page, wait)
-                time.sleep(wait)
-            else:
-                log.warning("HTTP %d on '%s' page %d", resp.status_code, keyword, page)
+            response = page.goto(url, wait_until="domcontentloaded", timeout=30000)
+            if response is None:
+                log.warning("No response for '%s' page %d", keyword, pagenum)
                 time.sleep(10)
+                continue
+
+            status = response.status
+            if status == 429:
+                # Gentle, jittered backoff. If it persists past our attempts we give
+                # up on this page rather than hammering (which deepens the throttle).
+                wait = _jitter(45 * (attempt + 1))
+                log.warning("429 rate limit on '%s' page %d — waiting %ds", keyword, pagenum, int(wait))
+                time.sleep(wait)
+                continue
+
+            if status != 200:
+                log.warning("HTTP %d on '%s' page %d", status, keyword, pagenum)
+                time.sleep(10)
+                continue
+
+            # Wait for product links to appear
+            try:
+                page.wait_for_selector('a[href*="/dp/"]', timeout=10000)
+            except Exception:
+                pass  # some pages may load differently
+
+            html = page.content()
+            if len(html) > 5000:
+                return html
+            else:
+                log.warning("Page too short (%d chars) for '%s' page %d", len(html), keyword, pagenum)
+                time.sleep(10)
+
         except Exception as e:
-            log.error("Fetch error on '%s' page %d: %s", keyword, page, e)
+            log.error("CDP fetch error on '%s' page %d (attempt %d): %s", keyword, pagenum, attempt + 1, e)
             time.sleep(15)
+
     return None
 
 # ── Parse product ranks from HTML ─────────────────────────────────────────
-def parse_ranks(html: str, page: int) -> list[dict]:
+def parse_ranks(html: str, pagenum: int) -> list:
     """
-    Return list of {rank, url_path, name} for every product on the page.
-    Rank is 1-based across pages (page 1 = 1..20, page 2 = 21..40, etc.)
+    Extract product ranks from JSON-LD ItemList (primary method).
+    Falls back to href scraping if JSON-LD not found.
+    Returns list of {rank, url_path}.
     """
     results = []
 
-    # Chewy search results embed product links as href="/SLUG/dp/ID"
-    # Extract in document order — that order IS the rank
-    pattern = re.compile(
-        r'href="(/([^"]+)/dp/(\d+)[^"]*?)"[^>]*>.*?'
-        r'(?:<[^>]+>)*\s*([^<]{5,80})',
-        re.DOTALL
-    )
+    # Primary: parse schema.org ItemList embedded in JSON-LD
+    blocks = re.findall(r'<script[^>]+type="application/ld\+json"[^>]*>(.*?)</script>',
+                        html, re.DOTALL)
+    for block in blocks:
+        try:
+            data = json.loads(block)
+        except Exception:
+            continue
+        items = None
+        if data.get("@type") == "ItemList":
+            items = data.get("itemListElement", [])
+        elif data.get("@type") == "CollectionPage":
+            main = data.get("mainEntity", {})
+            if main.get("@type") == "ItemList":
+                items = main.get("itemListElement", [])
+        if not items:
+            continue
+        for item in items:
+            pos = item.get("position")
+            product = item.get("item", {})
+            url = product.get("url", "")
+            if pos and url:
+                path = url.replace("https://www.chewy.com", "")
+                results.append({"rank": pos, "url_path": path})
 
-    # Simpler: just extract all /*/dp/* hrefs in order
-    links = re.findall(r'href="(/[^"]+/dp/\d+)"', html)
+    if results:
+        return results
 
-    # Deduplicate while preserving order (each product appears multiple times)
+    # Fallback: href scraping (less reliable on Chewy's React pages)
+    log.debug("No JSON-LD product list found, falling back to href scraping")
+    links = re.findall(r'href="(/[^"]+/dp/\d+[^"]*)"', html)
     seen = {}
     for link in links:
-        if link not in seen:
-            seen[link] = len(seen) + 1  # position within this page
-
-    base_rank = (page - 1) * 20
-    for path, pos in seen.items():
-        results.append({
-            "rank":     base_rank + pos,
-            "url_path": path,
-        })
-
-    return results
+        base = link.split("?")[0]
+        if base not in seen:
+            seen[base] = len(seen) + 1
+    base_rank = (pagenum - 1) * 20
+    return [{"rank": base_rank + pos, "url_path": path} for path, pos in seen.items()]
 
 # ── Classify a result as a Purrfect Portal product ────────────────────────
 def classify_product(url_path: str) -> str | None:
-    """
-    Return a display name if this URL belongs to Purrfect Portal, else None.
-    Checks specific products first, then falls back to brand slug.
-    """
     path_lower = url_path.lower()
     if BRAND_SLUG not in path_lower:
         return None
-    # Match specific products
     for name, slug in PRODUCTS.items():
         if slug in path_lower:
             return name
-    # Generic Purrfect Portal product
-    # Extract a readable name from the URL slug
     slug_part = path_lower.split("/dp/")[0].lstrip("/")
     return slug_part.replace("-", " ").title()[:40]
 
 # ── Run one keyword ────────────────────────────────────────────────────────
-def track_keyword(session, keyword: str) -> dict:
-    """
-    Returns {product_name: rank} for all PP products found in top results.
-    """
+def track_keyword(cdp_page, keyword: str) -> dict:
+    """Returns {product_name: rank} for all PP products found in top results."""
     found = {}
-    for page in range(1, PAGES_TO_SCAN + 1):
-        html = fetch_search_page(session, keyword, page)
+    for pnum in range(1, PAGES_TO_SCAN + 1):
+        html = fetch_search_page_cdp(cdp_page, keyword, pnum)
         if not html:
-            log.warning("No HTML for '%s' page %d — stopping", keyword, page)
+            log.warning("No HTML for '%s' page %d — stopping", keyword, pnum)
             break
 
-        results = parse_ranks(html, page)
-        log.info("  '%s' page %d: %d unique product links", keyword, page, len(results))
+        results = parse_ranks(html, pnum)
+        log.info("  '%s' page %d: %d unique product links", keyword, pnum, len(results))
 
         for item in results:
             product = classify_product(item["url_path"])
@@ -180,17 +292,15 @@ def track_keyword(session, keyword: str) -> dict:
                 found[product] = item["rank"]
                 log.info("    FOUND '%s' at rank %d", product, item["rank"])
 
-        if page < PAGES_TO_SCAN:
-            time.sleep(DELAY_BETWEEN_PAGES)
+        if pnum < PAGES_TO_SCAN:
+            _human_dwell(cdp_page, DELAY_BETWEEN_PAGES * 0.6, DELAY_BETWEEN_PAGES * 1.4)
 
     return found
 
 # ── Dashboard HTML update ──────────────────────────────────────────────────
 def _spark(values: list) -> str:
-    """Generate a tiny SVG sparkline for a list of rank values (lower=better)."""
     if len(values) < 2:
         return ""
-    # Invert so lower rank = higher on chart
     inv = [1 / v if v else 0 for v in values]
     mn, mx = min(inv), max(inv)
     rng = mx - mn or 1
@@ -217,7 +327,7 @@ def _rank_pill(rank) -> str:
 def _change_badge(today, yesterday) -> str:
     if today is None or yesterday is None:
         return ""
-    diff = yesterday - today   # positive = improved (rank went down numerically)
+    diff = yesterday - today
     if diff == 0:
         return '<span style="color:var(--muted);font-size:10px;">—</span>'
     color = "#22c55e" if diff > 0 else "#ef4444"
@@ -230,17 +340,15 @@ def update_rank_section(history: dict):
         log.error("index.html not found")
         return
 
-    today_iso = datetime.now().strftime("%Y-%m-%d")
+    today_iso     = datetime.now().strftime("%Y-%m-%d")
     yesterday_iso = (datetime.now() - timedelta(days=1)).strftime("%Y-%m-%d")
 
     today_data    = history.get(today_iso, {})
     yesterday_data = history.get(yesterday_iso, {})
 
-    # Collect all keyword × product combinations seen in last 7 days
     recent_dates = sorted(history.keys())[-7:]
 
-    # Build keyword → {product: [rank_d-6 .. rank_today]} mapping
-    kw_products: dict[str, dict[str, list]] = {}
+    kw_products: dict = {}
     for kw in KEYWORDS:
         kw_products[kw] = {}
         for d in recent_dates:
@@ -250,12 +358,10 @@ def update_rank_section(history: dict):
                 idx = recent_dates.index(d)
                 kw_products[kw][prod][idx] = rank
 
-    # Build table rows
     rows_html = ""
     for kw in KEYWORDS:
         products = kw_products.get(kw, {})
         if not products:
-            # No PP products found for this keyword at all
             rows_html += (
                 f'<tr>'
                 f'<td style="font-size:12px;padding:6px 8px;">{kw}</td>'
@@ -280,7 +386,6 @@ def update_rank_section(history: dict):
             )
             first = False
 
-    # Timestamp
     ts = datetime.now().strftime("%b %#d, %Y" if sys.platform == "win32" else "%b %-d, %Y")
 
     section_html = f"""
@@ -317,7 +422,6 @@ def update_rank_section(history: dict):
     html = DASHBOARD_HTML.read_text(encoding="utf-8")
     placeholder = "___RANK_PLACEHOLDER___"
 
-    # Replace between sentinels
     new_html = re.sub(
         r'<!-- RANK-TRACKER-START -->.*?<!-- RANK-TRACKER-END -->',
         '<!-- RANK-TRACKER-START -->' + placeholder + '<!-- RANK-TRACKER-END -->',
@@ -357,42 +461,94 @@ def main():
     log.info("Chewy Rank Tracker — %s", today_iso)
     log.info("Keywords: %d  |  Pages/keyword: %d  |  Max rank: %d",
              len(KEYWORDS), PAGES_TO_SCAN, PAGES_TO_SCAN * 20)
+    log.info("Using Chrome CDP on port %d", DEBUG_PORT)
     log.info("=" * 60)
 
     history = load_history()
 
-    # Skip if already ran today
     if today_iso in history and len(history[today_iso]) >= len(KEYWORDS):
-        log.info("Already ran today — skipping. Delete %s entry to re-run.", today_iso)
+        log.info("Already ran today — skipping. Delete %s entry from rank_history.json to re-run.", today_iso)
         return
 
-    session = httpx.Session(impersonate="chrome124")
-
-    # Warm up with a homepage visit
-    log.info("Warming up session...")
+    # ── Import playwright (only when needed) ──────────────────────────────
     try:
-        r = session.get("https://www.chewy.com/", timeout=25,
-                        headers={"Accept-Language": "en-US,en;q=0.9"})
-        log.info("Homepage: HTTP %d", r.status_code)
-    except Exception as e:
-        log.warning("Homepage warm-up failed: %s", e)
-    time.sleep(5)
+        from playwright.sync_api import sync_playwright
+    except ImportError:
+        log.error("playwright not installed — run: pip install playwright && playwright install chromium")
+        sys.exit(1)
 
-    today_results: dict[str, dict] = history.get(today_iso, {})
+    # ── Start Chrome if needed ─────────────────────────────────────────────
+    chrome_proc = ensure_chrome_running()
+    if chrome_proc is None and not _is_chrome_cdp_ready():
+        log.error("Could not start Chrome with CDP. Aborting.")
+        sys.exit(1)
 
-    for i, keyword in enumerate(KEYWORDS):
-        log.info("Searching: '%s' (%d/%d)", keyword, i + 1, len(KEYWORDS))
-        found = track_keyword(session, keyword)
-        today_results[keyword] = found
-        if not found:
-            log.info("  → No Purrfect Portal products found in top %d", PAGES_TO_SCAN * 20)
-        else:
-            for prod, rank in found.items():
-                log.info("  → %-35s  rank #%d", prod, rank)
+    we_opened_chrome = chrome_proc is not None
 
-        if i < len(KEYWORDS) - 1:
-            log.info("  Waiting %ds before next keyword...", DELAY_BETWEEN_KEYWORDS)
-            time.sleep(DELAY_BETWEEN_KEYWORDS)
+    # ── Connect via CDP ────────────────────────────────────────────────────
+    log.info("Connecting to Chrome via CDP...")
+    with sync_playwright() as pw:
+        browser = pw.chromium.connect_over_cdp(f"http://localhost:{DEBUG_PORT}")
+        context = browser.contexts[0] if browser.contexts else browser.new_context()
+
+        # Strip the automation fingerprint before any page loads.
+        # navigator.webdriver===true is the single biggest bot tell Kasada checks.
+        try:
+            context.add_init_script("""
+                Object.defineProperty(navigator, 'webdriver', {get: () => undefined});
+                window.chrome = window.chrome || { runtime: {} };
+                Object.defineProperty(navigator, 'plugins', {get: () => [1,2,3,4,5]});
+                Object.defineProperty(navigator, 'languages', {get: () => ['en-US','en']});
+            """)
+        except Exception as e:
+            log.debug("Could not add init script: %s", e)
+
+        page = context.new_page()
+
+        # Warm up — visit Chewy homepage so cookies/session are established
+        log.info("Warming up on Chewy homepage...")
+        warm_status = None
+        try:
+            resp = page.goto("https://www.chewy.com/", wait_until="domcontentloaded", timeout=20000)
+            warm_status = resp.status if resp else None
+            log.info("Homepage: HTTP %s", warm_status)
+        except Exception as e:
+            log.warning("Homepage warm-up failed: %s", e)
+
+        # If we're already being rate-limited on the homepage, the profile/IP is
+        # flagged. Hammering searches now only deepens the throttle — back off and
+        # let the next scheduled run try with a cooled-down session.
+        if warm_status == 429:
+            log.error("Homepage returned 429 — session is rate-limited. Aborting this run "
+                      "cleanly so we don't deepen the throttle. Will retry next schedule.")
+            page.close()
+            browser.close()
+            if we_opened_chrome and chrome_proc:
+                chrome_proc.terminate()
+            sys.exit(2)
+
+        # Human-like settle + light scroll on the homepage before searching
+        _human_dwell(page, 4, 7)
+
+        today_results = history.get(today_iso, {})
+
+        for i, keyword in enumerate(KEYWORDS):
+            log.info("Searching: '%s' (%d/%d)", keyword, i + 1, len(KEYWORDS))
+            found = track_keyword(page, keyword)
+            today_results[keyword] = found
+            if not found:
+                log.info("  -> No Purrfect Portal products found in top %d", PAGES_TO_SCAN * 20)
+            else:
+                for prod, rank in found.items():
+                    log.info("  -> %-35s  rank #%d", prod, rank)
+
+            if i < len(KEYWORDS) - 1:
+                wait = _jitter(DELAY_BETWEEN_KEYWORDS)
+                log.info("  Waiting %ds before next keyword...", int(wait))
+                time.sleep(wait)
+
+        page.close()
+        browser.close()
 
     history[today_iso] = today_results
     save_history(history)
@@ -400,6 +556,12 @@ def main():
 
     update_rank_section(history)
     git_push()
+
+    # Close Chrome if we opened it
+    if we_opened_chrome and chrome_proc:
+        log.info("Closing Chrome (we opened it)")
+        chrome_proc.terminate()
+
     log.info("Done.")
 
 if __name__ == "__main__":
